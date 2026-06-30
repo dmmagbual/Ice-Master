@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ice Master — Admin Dashboard</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<style>
+  :root {
+    --primary: #0077B6;
+    --primary-dark: #005f92;
+    --accent: #00B4D8;
+    --light-bg: #f0f8ff;
+    --text-dark: #1a1a2e;
+    --text-mid: #444;
+    --text-light: #777;
+    --border: #dce9f5;
+    --white: #fff;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --sidebar-w: 240px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#f5f7fa; color:var(--text-dark); }
+
+  /* ===== LOGIN SCREEN ===== */
+  #loginScreen {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#0a2a4a,#0077B6);
+  }
+  .login-card {
+    background:#fff; border-radius:20px; padding:48px 40px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3); width:100%; max-width:400px;
+  }
+  .login-logo { text-align:center; margin-bottom:28px; }
+  .login-logo .logo-circle { width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:900; color:#fff; margin:0 auto 12px; }
+  .login-logo h2 { color:var(--primary); font-size:1.3rem; font-weight:800; }
+  .login-logo p { color:var(--text-light); font-size:.82rem; margin-top:4px; }
+  .login-field { display:flex; flex-direction:column; gap:6px; margin-bottom:18px; }
+  .login-field label { font-size:.85rem; font-weight:600; color:var(--text-dark); }
+  .login-field input { border:1.5px solid var(--border); border-radius:8px; padding:12px 14px; font-size:.95rem; outline:none; transition:.2s; }
+  .login-field input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,119,182,.1); }
+  .login-btn { width:100%; background:var(--primary); color:#fff; border:none; padding:14px; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; transition:.2s; margin-top:4px; }
+  .login-btn:hover { background:var(--primary-dark); }
+  .login-error { color:var(--danger); font-size:.83rem; text-align:center; margin-top:10px; display:none; }
+
+  /* ===== DASHBOARD LAYOUT ===== */
+  #dashboard { display:none; min-height:100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    position:fixed; top:0; left:0; bottom:0; width:var(--sidebar-w);
+    background:linear-gradient(160deg,#0a2a4a,#0d3d6b);
+    color:#cce8f6; z-index:100; display:flex; flex-direction:column;
+    overflow-y:auto;
+  }
+  .sidebar-brand { padding:24px 20px; border-bottom:1px solid rgba(255,255,255,.1); }
+  .sidebar-brand .logo { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; color:#fff; margin-bottom:10px; }
+  .sidebar-brand h3 { font-size:1rem; font-weight:800; color:#fff; }
+  .sidebar-brand p { font-size:.7rem; opacity:.6; letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+  .sidebar-nav { flex:1; padding:16px 0; }
+  .nav-item {
+    display:flex; align-items:center; gap:12px; padding:12px 20px;
+    cursor:pointer; transition:.2s; font-size:.9rem; border-left:3px solid transparent;
+    color:rgba(204,232,246,.8);
+  }
+  .nav-item:hover { background:rgba(255,255,255,.07); color:#fff; }
+  .nav-item.active { background:rgba(0,180,216,.15); border-left-color:var(--accent); color:#fff; font-weight:600; }
+  .nav-item .nav-icon { font-size:1.1rem; width:22px; text-align:center; }
+  .sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,.1); }
+  .logout-btn { width:100%; background:rgba(220,53,69,.2); color:#ff8a94; border:1px solid rgba(220,53,69,.3); padding:10px; border-radius:8px; font-size:.85rem; font-weight:600; cursor:pointer; transition:.2s; }
+  .logout-btn:hover { background:rgba(220,53,69,.35); color:#fff; }
+  .sidebar-user { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .user-avatar { width:36px; height:36px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; }
+  .user-info p { font-size:.78rem; color:#cce8f6; }
+  .user-info small { font-size:.7rem; opacity:.6; }
+
+  /* Main content area */
+  .main-content { margin-left:var(--sidebar-w); padding:28px; min-height:100vh; }
+
+  /* Top bar */
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+  .topbar h1 { font-size:1.4rem; font-weight:800; color:var(--text-dark); }
+  .topbar p { font-size:.82rem; color:var(--text-light); margin-top:2px; }
+
+  /* Save button / toast */
+  .save-btn { background:var(--primary); color:#fff; border:none; padding:10px 22px; border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; transition:.2s; display:flex; align-items:center; gap:8px; }
+  .save-btn:hover { background:var(--primary-dark); }
+  .save-btn:disabled { background:#ccc; cursor:not-allowed; }
+  .toast { position:fixed; top:20px; right:20px; z-index:9999; padding:14px 20px; border-radius:10px; font-size:.9rem; font-weight:600; color:#fff; box-shadow:0 4px 20px rgba(0,0,0,.2); animation:slideIn .3s ease; display:none; }
+  .toast.success { background:var(--success); }
+  .toast.error { background:var(--danger); }
+  @keyframes slideIn { from{ transform:translateX(100px); opacity:0;} to{ transform:translateX(0); opacity:1;} }
+
+  /* Tab panels */
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* Cards */
+  .card { background:#fff; border-radius:12px; padding:24px; box-shadow:0 2px 12px rgba(0,119,182,.08); border:1px solid var(--border); margin-bottom:20px; }
+  .card-title { font-size:1rem; font-weight:700; color:var(--text-dark); margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .card-title span { font-size:1.2rem; }
+
+  /* Form fields */
+  .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:700px){ .field-grid { grid-template-columns:1fr; } }
+  .field-full { grid-column:1/-1; }
+  .field-group { display:flex; flex-direction:column; gap:5px; }
+  .field-group label { font-size:.8rem; font-weight:600; color:var(--text-mid); }
+  .field-group input, .field-group textarea, .field-group select {
+    border:1.5px solid var(--border); border-radius:8px; padding:10px 12px;
+    font-size:.9rem; color:var(--text-dark); outline:none; transition:.2s; font-family:inherit;
+  }
+  .field-group input:focus, .field-group textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,119,182,.08); }
+  .field-group textarea { resize:vertical; min-height:70px; }
+  .field-hint { font-size:.72rem; color:var(--text-light); margin-top:3px; }
+
+  /* Product edit rows */
+  .product-row { display:grid; grid-template-columns:auto 1fr 140px 120px; gap:16px; align-items:start; padding:16px; background:var(--light-bg); border-radius:10px; margin-bottom:12px; border:1px solid var(--border); }
+  .product-row .prod-icon { font-size:2rem; display:flex; align-items:center; justify-content:center; width:48px; height:48px; }
+  .product-row .prod-name { font-size:.9rem; font-weight:700; color:var(--text-dark); }
+  .product-row .prod-desc-input { font-size:.82rem; }
+  @media(max-width:750px){ .product-row { grid-template-columns:1fr; } }
+
+  /* Delivery fees table */
+  .fee-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+  .fee-table th { background:var(--primary); color:#fff; padding:10px 12px; text-align:left; }
+  .fee-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .fee-table tr:nth-child(even) td { background:var(--light-bg); }
+  .fee-table input { border:1.5px solid var(--border); border-radius:6px; padding:6px 10px; font-size:.85rem; width:100%; outline:none; }
+  .fee-table input:focus { border-color:var(--primary); }
+  .del-btn { background:rgba(220,53,69,.1); color:var(--danger); border:1px solid rgba(220,53,69,.2); padding:5px 10px; border-radius:6px; font-size:.78rem; cursor:pointer; white-space:nowrap; }
+  .del-btn:hover { background:var(--danger); color:#fff; }
+  .add-fee-row { display:grid; grid-template-columns:1fr 120px auto; gap:10px; margin-top:14px; align-items:center; }
+
+  /* Orders */
+  .order-card { background:#fff; border-radius:10px; padding:18px; border:1px solid var(--border); margin-bottom:12px; }
+  .order-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .order-name { font-size:1rem; font-weight:700; color:var(--text-dark); }
+  .order-date { font-size:.75rem; color:var(--text-light); }
+  .order-badge { padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:700; }
+  .badge-pending { background:#fff3cd; color:#856404; }
+  .badge-confirmed { background:#d1e7dd; color:#0f5132; }
+  .badge-delivered { background:#cfe2ff; color:#084298; }
+  .badge-cancelled { background:#f8d7da; color:#842029; }
+  .order-detail { font-size:.83rem; color:var(--text-mid); line-height:1.7; }
+  .order-products-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .order-product-tag { background:var(--light-bg); border:1px solid var(--border); border-radius:6px; padding:3px 10px; font-size:.75rem; color:var(--primary); font-weight:600; }
+  .status-select { border:1.5px solid var(--border); border-radius:6px; padding:5px 10px; font-size:.82rem; cursor:pointer; outline:none; }
+  .update-status-btn { background:var(--primary); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:.78rem; font-weight:600; cursor:pointer; }
+
+  /* Stats bar */
+  .stats-bar { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 2px 12px rgba(0,119,182,.08); border:1px solid var(--border); text-align:center; }
+  .stat-num { font-size:2rem; font-weight:900; color:var(--primary); }
+  .stat-label { font-size:.76rem; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+  .badge-count { background:var(--danger); color:#fff; font-size:.65rem; font-weight:700; padding:2px 6px; border-radius:10px; margin-left:6px; }
+
+  /* Loading state */
+  .loading-text { color:var(--text-light); font-size:.88rem; font-style:italic; text-align:center; padding:20px; }
+</style>
+</head>
+<body>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast"></div>
+
+<!-- ======================== LOGIN SCREEN ======================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-circle">IM</div>
+      <h2>Ice Master Admin</h2>
+      <p>Website Management Dashboard</p>
+    </div>
+    <div class="login-field">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="admin@icemaster.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">🔐 Log In to Dashboard</button>
+    <p class="login-error" id="loginError">Invalid email or password. Please try again.</p>
+    <p style="font-size:.72rem;color:var(--text-light);text-align:center;margin-top:16px;">🔒 Secure admin access only</p>
+  </div>
+</div>
+
+<!-- ======================== DASHBOARD ======================== -->
+<div id="dashboard">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">IM</div>
+      <h3>Ice Master</h3>
+      <p>Admin Dashboard</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="showTab('overview')">   <span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item" onclick="showTab('settings')">          <span class="nav-icon">🏢</span> Business Info</div>
+      <div class="nav-item" onclick="showTab('products')">          <span class="nav-icon">🧊</span> Products & Pricing</div>
+      <div class="nav-item" onclick="showTab('delivery')">          <span class="nav-icon">🚚</span> Delivery Fees</div>
+      <div class="nav-item" onclick="showTab('orders')">            <span class="nav-icon">📦</span> Orders <span class="badge-count" id="pending-count">0</span></div>
+      <div class="nav-item" onclick="window.open('index.html','_blank')"><span class="nav-icon">🌐</span> View Website</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="userInitial">A</div>
+        <div class="user-info">
+          <p id="userEmail">—</p>
+          <small>Administrator</small>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">🚪 Log Out</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- ===== OVERVIEW TAB ===== -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="topbar"><div><h1>📊 Dashboard Overview</h1><p>Welcome back! Here's a snapshot of your Ice Master website.</p></div></div>
+      <div class="stats-bar">
+        <div class="stat-card"><div class="stat-num" id="ov-orders">—</div><div class="stat-label">Total Orders</div></div>
+        <div class="stat-card"><div class="stat-num" id="ov-pending">—</div><div class="stat-label">Pending Orders</div></div>
+        <div class="stat-card"><div class="stat-num" id="ov-products">7</div><div class="stat-label">Products Listed</div></div>
+        <div class="stat-card"><div class="stat-num" id="ov-fees">—</div><div class="stat-label">Delivery Areas</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>📋</span> Recent Orders</div>
+        <div id="overview-orders"><p class="loading-text">Loading recent orders...</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>⚡</span> Quick Actions</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+          <button class="save-btn" onclick="showTab('settings')">🏢 Edit Business Info</button>
+          <button class="save-btn" onclick="showTab('products')">💰 Update Prices</button>
+          <button class="save-btn" onclick="showTab('orders')">📦 View All Orders</button>
+          <button class="save-btn" style="background:#25D366;" onclick="window.open('index.html','_blank')">🌐 View Website</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS TAB ===== -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="topbar">
+        <div><h1>🏢 Business Information</h1><p>Update your contact details, address, and payment info.</p></div>
+        <button class="save-btn" onclick="saveSettings()">💾 Save Changes</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>🏪</span> General Info</div>
+        <div class="field-grid">
+          <div class="field-group field-full"><label>City / Municipality *</label><input type="text" id="s-city" placeholder="e.g., Davao City"><span class="field-hint">Shown across the website (product pages, footer, about page)</span></div>
+          <div class="field-group field-full"><label>Province</label><input type="text" id="s-province" placeholder="e.g., Davao del Sur"></div>
+          <div class="field-group"><label>Year Established</label><input type="text" id="s-year" placeholder="e.g., 2015"></div>
+          <div class="field-group"><label>Happy Customers Count</label><input type="text" id="s-customers" placeholder="e.g., 500+ or 1,000+"></div>
+          <div class="field-group"><label>Years Operating</label><input type="text" id="s-yearsop" placeholder="e.g., 10+ or 8"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>📍</span> Address</div>
+        <div class="field-grid">
+          <div class="field-group field-full"><label>Street / Purok / Unit No.</label><input type="text" id="s-addr1" placeholder="e.g., Purok 3, Del Monte Street"></div>
+          <div class="field-group field-full"><label>Barangay</label><input type="text" id="s-addr2" placeholder="e.g., Barangay Panacan"></div>
+          <div class="field-group"><label>Google Maps URL</label><input type="text" id="s-maps" placeholder="https://maps.google.com/..."><span class="field-hint">Paste your Google Maps share link here</span></div>
+          <div class="field-group"><label>Operating Hours</label><input type="text" id="s-hours" placeholder="e.g., Mon–Sun, 6:00 AM – 8:00 PM"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>📞</span> Contact & Social Media</div>
+        <div class="field-grid">
+          <div class="field-group"><label>Phone / SMS Number *</label><input type="text" id="s-phone" placeholder="e.g., 0917-123-4567"></div>
+          <div class="field-group"><label>Viber Number</label><input type="text" id="s-viber" placeholder="e.g., 0917-123-4567"></div>
+          <div class="field-group"><label>Facebook Handle / Name</label><input type="text" id="s-fbHandle" placeholder="e.g., Ice Master PH"><span class="field-hint">Displayed as link text on the website</span></div>
+          <div class="field-group"><label>Facebook Page URL</label><input type="text" id="s-fbUrl" placeholder="https://facebook.com/youpage"><span class="field-hint">Full URL of your Facebook page</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>💳</span> Payment Details</div>
+        <div class="field-grid">
+          <div class="field-group"><label>GCash Number</label><input type="text" id="s-gcashNum" placeholder="e.g., 0917-123-4567"></div>
+          <div class="field-group"><label>GCash Account Name</label><input type="text" id="s-gcashName" placeholder="e.g., Juan D."></div>
+          <div class="field-group"><label>Maya Number</label><input type="text" id="s-mayaNum" placeholder="e.g., 0917-123-4567"></div>
+          <div class="field-group"><label>Maya Account Name</label><input type="text" id="s-mayaName" placeholder="e.g., Juan D."></div>
+          <div class="field-group"><label>Bank Name</label><input type="text" id="s-bankName" placeholder="e.g., BDO, BPI, Metrobank"></div>
+          <div class="field-group"><label>Bank Account Number</label><input type="text" id="s-bankAcct" placeholder="e.g., 0012-3456-7890"></div>
+          <div class="field-group field-full"><label>Bank Account Holder Name</label><input type="text" id="s-bankAcctName" placeholder="e.g., Juan dela Cruz"></div>
+        </div>
+      </div>
+
+      <div style="text-align:right;padding-top:8px;">
+        <button class="save-btn" onclick="saveSettings()">💾 Save All Business Info</button>
+      </div>
+    </div>
+
+    <!-- ===== PRODUCTS TAB ===== -->
+    <div class="tab-panel" id="tab-products">
+      <div class="topbar">
+        <div><h1>🧊 Products & Pricing</h1><p>Update prices and descriptions. Changes appear instantly on your website.</p></div>
+        <button class="save-btn" onclick="saveProducts()">💾 Save Prices</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>❄️</span> Ice Products</div>
+        <div class="product-row">
+          <div class="prod-icon">🧊</div>
+          <div><div class="prod-name">Ice Tube – 1kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice1kg-desc" rows="2" placeholder="Product description shown on website..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice1kg-price" placeholder="0" min="0" step="0.5"></div>
+          <div class="field-group"><label>Unit</label><input type="text" id="pd-ice1kg-unit" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+        <div class="product-row">
+          <div class="prod-icon">🧊</div>
+          <div><div class="prod-name">Ice Tube – 5kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice5kg-desc" rows="2" placeholder="Product description..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice5kg-price" placeholder="0" min="0" step="0.5"></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+        <div class="product-row">
+          <div class="prod-icon">🧊</div>
+          <div><div class="prod-name">Ice Tube – 10kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice10kg-desc" rows="2" placeholder="Product description..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice10kg-price" placeholder="0" min="0" step="0.5"></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+        <div class="product-row">
+          <div class="prod-icon">🧊</div>
+          <div><div class="prod-name">Ice Block</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-iceblock-desc" rows="2" placeholder="Product description..."></textarea></div><div class="field-group" style="margin-top:8px;"><label>Note (e.g., weight info)</label><input type="text" id="pd-iceblock-note" placeholder="e.g., Approx. 25kg per block"></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-iceblock-price" placeholder="0" min="0" step="0.5"></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="block" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>💧</span> Purified Water Products</div>
+        <div class="product-row">
+          <div class="prod-icon">💧</div>
+          <div><div class="prod-name">Purified Water Refill – 5 Gallon</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-waterrefill-desc" rows="2" placeholder="Product description..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-waterrefill-price" placeholder="0" min="0" step="0.5"></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="refill" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+        <div class="product-row">
+          <div class="prod-icon">🫙</div>
+          <div><div class="prod-name">Purified Water – 5 Gallon Jug (with container)</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-waterjug-desc" rows="2" placeholder="Product description..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-waterjug-price" placeholder="0" min="0" step="0.5"><div class="field-group" style="margin-top:8px;"><label>Deposit (₱)</label><input type="number" id="pd-waterjug-deposit" placeholder="0" min="0"></div></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="jug" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+        <div class="product-row">
+          <div class="prod-icon">🧴</div>
+          <div><div class="prod-name">Purified Water – 1 Liter Bottle</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-water1l-desc" rows="2" placeholder="Product description..."></textarea></div></div>
+          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-water1l-price" placeholder="0" min="0" step="0.5"><div class="field-group" style="margin-top:8px;"><label>Min Order (bottles)</label><input type="number" id="pd-water1l-min" placeholder="e.g., 6" min="1"></div></div>
+          <div class="field-group"><label>Unit</label><input type="text" value="bottle" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        </div>
+      </div>
+
+      <div style="text-align:right;padding-top:8px;">
+        <button class="save-btn" onclick="saveProducts()">💾 Save All Prices</button>
+      </div>
+    </div>
+
+    <!-- ===== DELIVERY TAB ===== -->
+    <div class="tab-panel" id="tab-delivery">
+      <div class="topbar">
+        <div><h1>🚚 Delivery Fees</h1><p>Manage delivery areas and fees per barangay or zone.</p></div>
+        <button class="save-btn" onclick="saveDelivery()">💾 Save Delivery Fees</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>📋</span> Delivery Areas & Fees</div>
+        <table class="fee-table" id="feesTable">
+          <tr><th>#</th><th>Area / Barangay</th><th style="width:140px;">Fee (₱) — 0 = FREE</th><th style="width:80px;">Action</th></tr>
+        </table>
+        <div class="add-fee-row">
+          <input type="text" id="new-area" placeholder="New area or barangay name">
+          <input type="number" id="new-fee" placeholder="Fee (₱)" min="0">
+          <button class="save-btn" onclick="addFeeRow()">+ Add Area</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>🎁</span> Free Delivery Threshold</div>
+        <div class="field-grid">
+          <div class="field-group"><label>Free Delivery for Orders Above (₱)</label><input type="number" id="s-freeAbove" placeholder="e.g., 500 — leave 0 if no free delivery"><span class="field-hint">Enter 0 if you don't offer free delivery</span></div>
+          <div class="field-group"><label>Delivery Note (shown on website)</label><input type="text" id="s-deliveryNote" placeholder="e.g., Contact us for areas not listed."></div>
+        </div>
+      </div>
+      <div style="text-align:right;padding-top:8px;">
+        <button class="save-btn" onclick="saveDelivery()">💾 Save Delivery Settings</button>
+      </div>
+    </div>
+
+    <!-- ===== ORDERS TAB ===== -->
+    <div class="tab-panel" id="tab-orders">
+      <div class="topbar">
+        <div><h1>📦 Customer Orders</h1><p>All orders submitted through the website.</p></div>
+        <button class="save-btn" onclick="loadOrders()">🔄 Refresh</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="order-filters">
+        <button onclick="filterOrders('all')" class="save-btn" style="background:var(--text-mid);">All</button>
+        <button onclick="filterOrders('Pending')" class="save-btn" style="background:#856404;">Pending</button>
+        <button onclick="filterOrders('Confirmed')" class="save-btn" style="background:var(--success);">Confirmed</button>
+        <button onclick="filterOrders('Delivered')" class="save-btn" style="background:var(--primary);">Delivered</button>
+        <button onclick="filterOrders('Cancelled')" class="save-btn" style="background:var(--danger);">Cancelled</button>
+      </div>
+      <div id="orders-list"><p class="loading-text">Loading orders...</p></div>
+    </div>
+
+  </div><!-- end main-content -->
+</div><!-- end dashboard -->
+
+<script>
+// ============================================================
+// FIREBASE CONFIG — Must match exactly what's in index.html
+// ============================================================
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+// ============================================================
+// AUTH
+// ============================================================
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('userEmail').textContent = user.email;
+    document.getElementById('userInitial').textContent = user.email[0].toUpperCase();
+    loadAllData();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+});
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+  auth.signInWithEmailAndPassword(email, pass).catch(err => {
+    errEl.textContent = 'Login failed: ' + (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' ? 'Invalid email or password.' : err.message);
+    errEl.style.display = 'block';
+  });
+}
+
+function doLogout() {
+  if (confirm('Log out of the admin dashboard?')) auth.signOut();
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const items = document.querySelectorAll('.nav-item');
+  const tabMap = { overview:0, settings:1, products:2, delivery:3, orders:4 };
+  if (tabMap[tab] !== undefined) items[tabMap[tab]].classList.add('active');
+  if (tab === 'orders') loadOrders();
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type; t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+// ============================================================
+// LOAD ALL DATA
+// ============================================================
+let allOrders = [];
+let deliveryFees = [];
+
+async function loadAllData() {
+  try {
+    const [settSnap, prodSnap, delSnap, ordersSnap] = await Promise.all([
+      db.collection('site').doc('settings').get(),
+      db.collection('site').doc('products').get(),
+      db.collection('site').doc('delivery').get(),
+      db.collection('orders').orderBy('createdAt','desc').limit(50).get()
+    ]);
+
+    if (settSnap.exists)   populateSettings(settSnap.data());
+    if (prodSnap.exists)   populateProducts(prodSnap.data());
+    if (delSnap.exists)    populateDelivery(delSnap.data());
+    allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOrders(allOrders);
+    updateStats();
+  } catch(e) {
+    showToast('Could not load data from Firebase. Check your config.', 'error');
+    console.error(e);
+  }
+}
+
+function updateStats() {
+  const pending = allOrders.filter(o => o.status === 'Pending').length;
+  document.getElementById('ov-orders').textContent  = allOrders.length;
+  document.getElementById('ov-pending').textContent = pending;
+  document.getElementById('ov-fees').textContent    = deliveryFees.length;
+  document.getElementById('pending-count').textContent = pending || '';
+  renderOverviewOrders();
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function populateSettings(s) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val || ''; };
+  set('s-city', s.city); set('s-province', s.province); set('s-year', s.yearEstablished);
+  set('s-customers', s.customerCount); set('s-yearsop', s.yearsOperating);
+  set('s-addr1', s.address1); set('s-addr2', s.address2);
+  set('s-maps', s.googleMapsUrl); set('s-hours', s.operatingHours);
+  set('s-phone', s.phone); set('s-viber', s.viber);
+  set('s-fbHandle', s.facebookHandle); set('s-fbUrl', s.facebookUrl);
+  set('s-gcashNum', s.gcashNumber); set('s-gcashName', s.gcashName);
+  set('s-mayaNum', s.mayaNumber); set('s-mayaName', s.mayaName);
+  set('s-bankName', s.bankName); set('s-bankAcct', s.bankAccount); set('s-bankAcctName', s.bankAccountName);
+}
+
+async function saveSettings() {
+  const g = (id) => document.getElementById(id)?.value?.trim() || '';
+  const data = {
+    city: g('s-city'), province: g('s-province'), yearEstablished: g('s-year'),
+    customerCount: g('s-customers'), yearsOperating: g('s-yearsop'),
+    address1: g('s-addr1'), address2: g('s-addr2'),
+    googleMapsUrl: g('s-maps'), operatingHours: g('s-hours'),
+    phone: g('s-phone'), viber: g('s-viber'),
+    facebookHandle: g('s-fbHandle'), facebookUrl: g('s-fbUrl'),
+    gcashNumber: g('s-gcashNum'), gcashName: g('s-gcashName'),
+    mayaNumber: g('s-mayaNum'), mayaName: g('s-mayaName'),
+    bankName: g('s-bankName'), bankAccount: g('s-bankAcct'), bankAccountName: g('s-bankAcctName'),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try {
+    await db.collection('site').doc('settings').set(data, { merge: true });
+    showToast('✅ Business info saved successfully!');
+  } catch(e) { showToast('❌ Save failed: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+function populateProducts(p) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val ?? ''; };
+  if (p.ice1kg)      { set('pd-ice1kg-price', p.ice1kg.price);      set('pd-ice1kg-desc', p.ice1kg.description); }
+  if (p.ice5kg)      { set('pd-ice5kg-price', p.ice5kg.price);      set('pd-ice5kg-desc', p.ice5kg.description); }
+  if (p.ice10kg)     { set('pd-ice10kg-price', p.ice10kg.price);    set('pd-ice10kg-desc', p.ice10kg.description); }
+  if (p.iceBlock)    { set('pd-iceblock-price', p.iceBlock.price);  set('pd-iceblock-desc', p.iceBlock.description); set('pd-iceblock-note', p.iceBlock.note); }
+  if (p.waterRefill) { set('pd-waterrefill-price', p.waterRefill.price); set('pd-waterrefill-desc', p.waterRefill.description); }
+  if (p.waterJug)    { set('pd-waterjug-price', p.waterJug.price);  set('pd-waterjug-desc', p.waterJug.description); set('pd-waterjug-deposit', p.waterJug.deposit); }
+  if (p.water1L)     { set('pd-water1l-price', p.water1L.price);    set('pd-water1l-desc', p.water1L.description); set('pd-water1l-min', p.water1L.minOrder); }
+}
+
+async function saveProducts() {
+  const g  = (id) => document.getElementById(id)?.value?.trim() || '';
+  const gn = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+  const data = {
+    ice1kg:      { price: gn('pd-ice1kg-price'),      description: g('pd-ice1kg-desc') },
+    ice5kg:      { price: gn('pd-ice5kg-price'),      description: g('pd-ice5kg-desc') },
+    ice10kg:     { price: gn('pd-ice10kg-price'),     description: g('pd-ice10kg-desc') },
+    iceBlock:    { price: gn('pd-iceblock-price'),    description: g('pd-iceblock-desc'),    note: g('pd-iceblock-note') },
+    waterRefill: { price: gn('pd-waterrefill-price'), description: g('pd-waterrefill-desc') },
+    waterJug:    { price: gn('pd-waterjug-price'),    description: g('pd-waterjug-desc'),    deposit: gn('pd-waterjug-deposit') },
+    water1L:     { price: gn('pd-water1l-price'),     description: g('pd-water1l-desc'),     minOrder: parseInt(document.getElementById('pd-water1l-min')?.value) || 1 },
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try {
+    await db.collection('site').doc('products').set(data);
+    showToast('✅ Products & prices saved!');
+  } catch(e) { showToast('❌ Save failed: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// DELIVERY FEES
+// ============================================================
+function populateDelivery(d) {
+  deliveryFees = d.fees || [];
+  const el = document.getElementById('s-freeAbove'); if (el) el.value = d.freeAbove || '';
+  const dn = document.getElementById('s-deliveryNote'); if (dn) dn.value = d.deliveryNote || '';
+  renderFeesTable();
+}
+
+function renderFeesTable() {
+  const table = document.getElementById('feesTable');
+  const rows = deliveryFees.map((fee, i) => `
+    <tr>
+      <td style="color:var(--text-light);font-size:.8rem;">${i + 1}</td>
+      <td><input type="text" value="${fee.area}" onchange="deliveryFees[${i}].area=this.value" placeholder="Area name"></td>
+      <td><input type="number" value="${fee.fee}" onchange="deliveryFees[${i}].fee=parseFloat(this.value)||0" min="0" placeholder="0"></td>
+      <td><button class="del-btn" onclick="removeFeeRow(${i})">✕ Remove</button></td>
+    </tr>`).join('');
+  table.innerHTML = `<tr><th>#</th><th>Area / Barangay</th><th style="width:140px;">Fee (₱) — 0 = FREE</th><th style="width:100px;">Action</th></tr>${rows}`;
+}
+
+function addFeeRow() {
+  const area = document.getElementById('new-area').value.trim();
+  const fee  = parseFloat(document.getElementById('new-fee').value) || 0;
+  if (!area) { showToast('Please enter an area name.', 'error'); return; }
+  deliveryFees.push({ area, fee, order: deliveryFees.length + 1 });
+  document.getElementById('new-area').value = '';
+  document.getElementById('new-fee').value  = '';
+  renderFeesTable();
+  document.getElementById('ov-fees').textContent = deliveryFees.length;
+}
+
+function removeFeeRow(index) {
+  if (confirm('Remove "' + deliveryFees[index].area + '"?')) {
+    deliveryFees.splice(index, 1);
+    renderFeesTable();
+  }
+}
+
+async function saveDelivery() {
+  const freeAbove    = parseFloat(document.getElementById('s-freeAbove')?.value) || 0;
+  const deliveryNote = document.getElementById('s-deliveryNote')?.value?.trim() || '';
+  try {
+    await db.collection('site').doc('delivery').set({ fees: deliveryFees, freeAbove, deliveryNote, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast('✅ Delivery fees saved!');
+    document.getElementById('ov-fees').textContent = deliveryFees.length;
+  } catch(e) { showToast('❌ Save failed: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+let currentFilter = 'all';
+
+function filterOrders(status) {
+  currentFilter = status;
+  const filtered = status === 'all' ? allOrders : allOrders.filter(o => o.status === status);
+  renderOrders(filtered);
+}
+
+function renderOrders(orders) {
+  const container = document.getElementById('orders-list');
+  if (!orders.length) { container.innerHTML = '<p class="loading-text">No orders found.</p>'; return; }
+
+  const productLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
+  const statusClass  = { Pending:'badge-pending', Confirmed:'badge-confirmed', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
+
+  container.innerHTML = orders.map(order => {
+    const products = Object.entries(order.products || {}).filter(([,qty]) => qty > 0)
+      .map(([k, qty]) => `<span class="order-product-tag">${productLabels[k] || k} x${qty}</span>`).join('');
+    const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) : (order.createdAt || '—');
+    return `
+      <div class="order-card" id="order-${order.id}">
+        <div class="order-header">
+          <div>
+            <div class="order-name">👤 ${order.name}</div>
+            <div class="order-date">📅 Ordered: ${date} &nbsp;|&nbsp; Deliver on: ${order.date || '—'} ${order.time ? '| ' + order.time : ''}</div>
+          </div>
+          <span class="order-badge ${statusClass[order.status] || 'badge-pending'}">${order.status || 'Pending'}</span>
+        </div>
+        <div class="order-detail">
+          <div>📞 ${order.phone} &nbsp;|&nbsp; 📍 ${order.address}</div>
+          <div>💳 ${order.payment}</div>
+          ${order.notes ? '<div>📝 ' + order.notes + '</div>' : ''}
+        </div>
+        <div class="order-products-list">${products || '<span style="color:var(--text-light);font-size:.78rem;">No products specified</span>'}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+          <label style="font-size:.78rem;color:var(--text-mid);">Update Status:</label>
+          <select class="status-select" id="status-${order.id}">
+            <option ${order.status==='Pending'   ?'selected':''}>Pending</option>
+            <option ${order.status==='Confirmed' ?'selected':''}>Confirmed</option>
+            <option ${order.status==='Delivered' ?'selected':''}>Delivered</option>
+            <option ${order.status==='Cancelled' ?'selected':''}>Cancelled</option>
+          </select>
+          <button class="update-status-btn" onclick="updateOrderStatus('${order.id}')">Update</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderOverviewOrders() {
+  const recent = allOrders.slice(0, 5);
+  const container = document.getElementById('overview-orders');
+  if (!recent.length) { container.innerHTML = '<p class="loading-text">No orders yet.</p>'; return; }
+  const statusClass = { Pending:'badge-pending', Confirmed:'badge-confirmed', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
+  container.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+    <tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Customer</th><th style="text-align:left;padding:8px;">Phone</th><th style="text-align:left;padding:8px;">Delivery Date</th><th style="text-align:left;padding:8px;">Status</th></tr>
+    ${recent.map(o => `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:8px;">${o.name}</td>
+      <td style="padding:8px;">${o.phone}</td>
+      <td style="padding:8px;">${o.date || '—'}</td>
+      <td style="padding:8px;"><span class="order-badge ${statusClass[o.status]||'badge-pending'}">${o.status||'Pending'}</span></td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+async function updateOrderStatus(orderId) {
+  const newStatus = document.getElementById('status-' + orderId).value;
+  try {
+    await db.collection('orders').doc(orderId).update({ status: newStatus });
+    const idx = allOrders.findIndex(o => o.id === orderId);
+    if (idx !== -1) allOrders[idx].status = newStatus;
+    showToast('✅ Order status updated to: ' + newStatus);
+    updateStats();
+  } catch(e) { showToast('❌ Update failed: ' + e.message, 'error'); }
+}
+
+async function loadOrders() {
+  try {
+    const snap = await db.collection('orders').orderBy('createdAt', 'desc').limit(100).get();
+    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    filterOrders(currentFilter);
+    updateStats();
+    showToast('Orders refreshed.');
+  } catch(e) { showToast('❌ Could not load orders: ' + e.message, 'error'); }
+}
+</script>
+</body>
+</html>
