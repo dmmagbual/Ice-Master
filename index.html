@@ -972,8 +972,10 @@ async function submitOrder(e) {
   try {
     let orderId = '';
     if (firebaseReady && db) {
+      const shortId = Math.random().toString(36).slice(-6).toUpperCase();
+      orderData.shortId = shortId;
       const docRef = await db.collection('orders').add(orderData);
-      orderId = docRef.id.slice(-8).toUpperCase();
+      orderId = shortId;
     }
     const msgEl = document.getElementById('successMsg');
     msgEl.innerHTML = `✅ Order received! <strong>Your Order ID: #${orderId}</strong><br>
@@ -1045,37 +1047,53 @@ setInterval(spawnBubble, 900);
 loadSiteContent();
 
 // ============================================================
-// ORDER TRACKING
+// ORDER TRACKING (real-time via onSnapshot)
 // ============================================================
+let trackingUnsubscribers = [];
+
+function clearTrackingListeners() {
+  trackingUnsubscribers.forEach(fn => fn());
+  trackingUnsubscribers = [];
+}
+
 async function trackOrder() {
   const query = (document.getElementById('track-input')?.value || '').trim();
   const el    = document.getElementById('track-result');
   if (!el) return;
-  if (!query) { el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Please enter your phone number or Order ID.</p>'; return; }
-  if (!firebaseReady) { el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Service unavailable. Please try again later.</p>'; return; }
+  if (!query) {
+    el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Please enter your phone number or Order ID.</p>';
+    return;
+  }
+  if (!firebaseReady) {
+    el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Service unavailable. Try again later.</p>';
+    return;
+  }
 
+  clearTrackingListeners();
   el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:20px;">🔍 Searching...</p>';
 
   try {
-    let orders = [];
+    let docIds = [];
 
-    // Try as Order ID (last 8 chars of Firestore doc ID)
-    const allSnap = await db.collection('orders').get();
-    const byId = allSnap.docs.filter(d => d.id.slice(-8).toUpperCase() === query.toUpperCase());
-    if (byId.length) {
-      orders = byId.map(d => ({ id: d.id, ...d.data() }));
+    // Try as shortId first
+    const byShortId = await db.collection('orders').where('shortId', '==', query.toUpperCase()).get();
+    if (!byShortId.empty) {
+      docIds = byShortId.docs.map(d => d.id);
     } else {
       // Try by phone number
       const byPhone = await db.collection('orders').where('phone', '==', query).get();
-      orders = byPhone.docs.map(d => ({ id: d.id, ...d.data() }))
-                           .sort((a, b) => {
-                             const da = a.createdAt?.toDate?.() || new Date(0);
-                             const db2 = b.createdAt?.toDate?.() || new Date(0);
-                             return db2 - da;
-                           });
+      if (!byPhone.empty) {
+        docIds = byPhone.docs
+          .sort((a, b) => {
+            const da = a.data().createdAt?.toDate?.() || new Date(0);
+            const db2 = b.data().createdAt?.toDate?.() || new Date(0);
+            return db2 - da;
+          })
+          .map(d => d.id);
+      }
     }
 
-    if (!orders.length) {
+    if (!docIds.length) {
       el.innerHTML = `<div style="background:#fff;border-radius:var(--radius);padding:28px;text-align:center;box-shadow:var(--shadow);">
         <div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>
         <p style="font-weight:600;color:var(--text-dark);">No order found.</p>
@@ -1084,61 +1102,89 @@ async function trackOrder() {
       return;
     }
 
-    el.innerHTML = orders.map(o => renderTrackingCard(o)).join('');
+    // Create placeholder cards and subscribe to each doc in real-time
+    el.innerHTML = docIds.map(id => `<div id="track-card-${id}"><p style="text-align:center;color:var(--text-light);padding:16px;">Loading...</p></div>`).join('');
+
+    docIds.forEach(docId => {
+      const cardEl = document.getElementById('track-card-' + docId);
+      const unsub = db.collection('orders').doc(docId).onSnapshot(doc => {
+        if (doc.exists && cardEl) {
+          cardEl.innerHTML = renderTrackingCardInner({ id: doc.id, ...doc.data() });
+        }
+      });
+      trackingUnsubscribers.push(unsub);
+    });
+
   } catch(e) {
-    el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Error: ' + e.message + '</p>';
+    el.innerHTML = '<p style="color:#dc3545;text-align:center;padding:20px;">Error: ' + e.message + '</p>';
   }
 }
 
-function renderTrackingCard(order) {
+function renderTrackingCardInner(order) {
   const steps = [
-    { label:'Order Received',    icon:'📋', key:'Pending' },
-    { label:'Confirmed',         icon:'✅', key:'Confirmed' },
-    { label:'Preparing',         icon:'🧊', key:'Preparing' },
-    { label:'Out for Delivery',  icon:'🚚', key:'Out for Delivery' },
-    { label:'Delivered',         icon:'🎉', key:'Delivered' }
+    { label:'Order Received',   icon:'📋', key:'Pending' },
+    { label:'Confirmed',        icon:'✅', key:'Confirmed' },
+    { label:'Preparing',        icon:'🧊', key:'Preparing' },
+    { label:'Out for Delivery', icon:'🚚', key:'Out for Delivery' },
+    { label:'Delivered',        icon:'🎉', key:'Delivered' }
   ];
-  const cancelled = order.status === 'Cancelled';
+  const cancelled  = order.status === 'Cancelled';
   const currentIdx = steps.findIndex(s => s.key === order.status);
-  const effectiveIdx = cancelled ? -1 : currentIdx;
+  const effectiveIdx = cancelled ? -1 : (currentIdx === -1 ? 0 : currentIdx);
 
   const stepsHTML = steps.map((step, i) => {
     const done    = effectiveIdx > i;
-    const current = effectiveIdx === i;
-    return `
-      <div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative;z-index:1;">
-        <div style="width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;border:3px solid ${done||current?'var(--primary)':'var(--border)'};background:${done?'var(--primary)':current?'var(--light-bg)':'#fff'};color:${done?'#fff':'var(--text-dark)'};transition:.3s;">
-          ${done ? '✓' : step.icon}
-        </div>
-        <div style="font-size:.68rem;font-weight:${current?'700':'500'};color:${current?'var(--primary)':done?'var(--text-mid)':'var(--text-light)'};text-align:center;margin-top:6px;max-width:70px;line-height:1.3;">${step.label}</div>
-      </div>`;
-  }).join(`<div style="flex:1;height:3px;background:var(--border);margin-top:20px;z-index:0;"></div>`);
+    const current = effectiveIdx === i && !cancelled;
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;z-index:1;">
+      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${done?'1rem':'1.1rem'};font-weight:700;
+        border:3px solid ${done||current?'var(--primary)':'var(--border)'};
+        background:${done?'var(--primary)':current?'var(--light-bg)':'#fff'};
+        color:${done?'#fff':current?'var(--primary)':'var(--text-light)'};transition:.4s;">
+        ${done ? '✓' : step.icon}
+      </div>
+      <div style="font-size:.65rem;font-weight:${current?'700':'500'};
+        color:${current?'var(--primary)':done?'var(--text-mid)':'var(--text-light)'};
+        text-align:center;margin-top:6px;max-width:68px;line-height:1.3;">${step.label}</div>
+    </div>`;
+  }).join('<div style="flex:1;height:3px;background:var(--border);margin-top:19px;z-index:0;position:relative;top:1px;"></div>');
 
   const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH',{month:'long',day:'numeric',year:'numeric'}) : '—';
-  const shortId = order.id.slice(-8).toUpperCase();
+  const displayId = order.shortId || order.id.slice(-6).toUpperCase();
   const legacyLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
   const rawProds = order.products || order.items || {};
   const prodList = Array.isArray(rawProds)
-    ? rawProds.map(p => `${p.icon||''} ${p.name} ×${p.qty}`).join(' &nbsp;|&nbsp; ')
-    : Object.entries(rawProds).filter(([,qty])=>qty>0).map(([k,qty])=>`${legacyLabels[k]||k} ×${qty}`).join(' &nbsp;|&nbsp; ');
+    ? rawProds.map(p => `${p.icon||''} ${p.name} ×${p.qty}`).join(' | ')
+    : Object.entries(rawProds).filter(([,qty])=>qty>0).map(([k,qty])=>`${legacyLabels[k]||k} ×${qty}`).join(' | ');
 
-  return `
-    <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
-        <div>
-          <div style="font-size:1rem;font-weight:700;color:var(--text-dark);">Order #${shortId}</div>
-          <div style="font-size:.78rem;color:var(--text-light);">Placed: ${date} &nbsp;|&nbsp; Delivery: ${order.date||'—'}</div>
-          ${prodList ? `<div style="font-size:.78rem;color:var(--text-mid);margin-top:4px;">${prodList}</div>` : ''}
+  const statusColors = {
+    Pending:          { bg:'#fff3cd', color:'#856404' },
+    Confirmed:        { bg:'#d1e7dd', color:'#0f5132' },
+    Preparing:        { bg:'#e8d5ff', color:'#5a0099' },
+    'Out for Delivery':{ bg:'#ffd6a5', color:'#7c4a00' },
+    Delivered:        { bg:'#cfe2ff', color:'#084298' },
+    Cancelled:        { bg:'#f8d7da', color:'#842029' }
+  };
+  const sc = statusColors[order.status] || statusColors['Pending'];
+
+  return `<div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:var(--text-dark);">Order #${displayId}
+          <span style="font-size:.7rem;color:var(--text-light);font-weight:400;"> — 🔴 Live</span>
         </div>
-        <span style="padding:4px 14px;border-radius:12px;font-size:.75rem;font-weight:700;background:${cancelled?'#f8d7da':currentIdx===4?'#cfe2ff':'#fff3cd'};color:${cancelled?'#842029':currentIdx===4?'#084298':'#856404'};">
-          ${order.status || 'Pending'}
-        </span>
+        <div style="font-size:.78rem;color:var(--text-light);margin-top:2px;">Placed: ${date} &nbsp;|&nbsp; Delivery date: ${order.date||'—'}</div>
+        ${prodList ? `<div style="font-size:.78rem;color:var(--text-mid);margin-top:4px;">${prodList}</div>` : ''}
       </div>
-      ${cancelled
-        ? `<div style="text-align:center;padding:20px;color:var(--danger);font-weight:600;">❌ This order has been cancelled. Please contact us if you have questions.</div>`
-        : `<div style="display:flex;align-items:flex-start;gap:0;padding:8px 0;">${stepsHTML}</div>`
-      }
-    </div>`;
+      <span style="padding:4px 14px;border-radius:12px;font-size:.75rem;font-weight:700;background:${sc.bg};color:${sc.color};">
+        ${order.status || 'Pending'}
+      </span>
+    </div>
+    ${cancelled
+      ? `<div style="text-align:center;padding:20px;color:#dc3545;font-weight:600;">❌ This order has been cancelled. Please contact us if you have questions.</div>`
+      : `<div style="display:flex;align-items:flex-start;padding:8px 0;">${stepsHTML}</div>
+         <p style="font-size:.7rem;color:var(--text-light);text-align:center;margin-top:14px;">This page updates automatically — no need to refresh.</p>`
+    }
+  </div>`;
 }
 </script>
 </body>
