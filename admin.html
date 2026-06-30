@@ -176,6 +176,30 @@
   .cat-group-header { font-size:.85rem; font-weight:700; color:var(--primary); padding-bottom:8px; border-bottom:2px solid var(--border); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
   .add-cat-row { display:grid; grid-template-columns:70px 1fr auto; gap:10px; margin-top:14px; align-items:center; }
   @media(max-width:600px){ .product-item-row { grid-template-columns:auto 1fr; } }
+
+  /* Notification sound indicator */
+  .notif-pulse { display:none; align-items:center; gap:6px; background:rgba(220,53,69,.15); color:var(--danger); border:1px solid rgba(220,53,69,.3); border-radius:20px; padding:4px 10px; font-size:.72rem; font-weight:700; margin-left:6px; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+
+  /* Archive print */
+  @media print {
+    .sidebar, .topbar button, .no-print, nav { display:none !important; }
+    .main-content { margin-left:0 !important; }
+    .archive-print-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .archive-print-table th { background:#0077B6; color:#fff; padding:8px; text-align:left; }
+    .archive-print-table td { padding:8px; border-bottom:1px solid #ddd; }
+  }
+
+  /* Order status badges extra */
+  .badge-preparing { background:#e8d5ff; color:#5a0099; }
+  .badge-out-for-delivery { background:#ffd6a5; color:#7c4a00; }
+  .archive-btn { background:rgba(108,117,125,.1); color:#495057; border:1px solid rgba(108,117,125,.3); padding:5px 10px; border-radius:6px; font-size:.78rem; cursor:pointer; }
+  .archive-btn:hover { background:#6c757d; color:#fff; }
+
+  /* Tracking status steps (for index.html tracking page) */
+  .arch-date-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; padding:14px; background:var(--light-bg); border-radius:8px; border:1px solid var(--border); }
+  .arch-date-row label { font-size:.82rem; font-weight:600; color:var(--text-mid); }
+  .arch-date-row input[type=date] { border:1.5px solid var(--border); border-radius:6px; padding:7px 10px; font-size:.85rem; outline:none; }
 </style>
 </head>
 <body>
@@ -219,7 +243,8 @@
       <div class="nav-item" onclick="showTab('settings')">          <span class="nav-icon">🏢</span> Business Info</div>
       <div class="nav-item" onclick="showTab('products')">          <span class="nav-icon">🧊</span> Products & Pricing</div>
       <div class="nav-item" onclick="showTab('delivery')">          <span class="nav-icon">🚚</span> Delivery Fees</div>
-      <div class="nav-item" onclick="showTab('orders')">            <span class="nav-icon">📦</span> Orders <span class="badge-count" id="pending-count">0</span></div>
+      <div class="nav-item" onclick="showTab('orders')">            <span class="nav-icon">📦</span> Orders <span class="badge-count" id="pending-count">0</span><span class="notif-pulse" id="notif-indicator">🔔 NEW</span></div>
+      <div class="nav-item" onclick="showTab('archive')">           <span class="nav-icon">🗄️</span> Archive</div>
       <div class="nav-item" onclick="window.open('index.html','_blank')"><span class="nav-icon">🌐</span> View Website</div>
     </div>
     <div class="sidebar-footer">
@@ -416,14 +441,33 @@
         <div><h1>📦 Customer Orders</h1><p>All orders submitted through the website.</p></div>
         <button class="save-btn" onclick="loadOrders()">🔄 Refresh</button>
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="order-filters">
-        <button onclick="filterOrders('all')" class="save-btn" style="background:var(--text-mid);">All</button>
-        <button onclick="filterOrders('Pending')" class="save-btn" style="background:#856404;">Pending</button>
-        <button onclick="filterOrders('Confirmed')" class="save-btn" style="background:var(--success);">Confirmed</button>
-        <button onclick="filterOrders('Delivered')" class="save-btn" style="background:var(--primary);">Delivered</button>
-        <button onclick="filterOrders('Cancelled')" class="save-btn" style="background:var(--danger);">Cancelled</button>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;" id="order-filters">
+        <button onclick="filterOrders('all')"              class="save-btn" style="background:var(--text-mid);">All</button>
+        <button onclick="filterOrders('Pending')"          class="save-btn" style="background:#856404;">Pending</button>
+        <button onclick="filterOrders('Confirmed')"        class="save-btn" style="background:var(--success);">Confirmed</button>
+        <button onclick="filterOrders('Preparing')"        class="save-btn" style="background:#5a0099;">Preparing</button>
+        <button onclick="filterOrders('Out for Delivery')" class="save-btn" style="background:#7c4a00;">Out for Delivery</button>
+        <button onclick="filterOrders('Delivered')"        class="save-btn" style="background:var(--primary);">Delivered</button>
+        <button onclick="filterOrders('Cancelled')"        class="save-btn" style="background:var(--danger);">Cancelled</button>
       </div>
       <div id="orders-list"><p class="loading-text">Loading orders...</p></div>
+    </div>
+
+    <!-- ===== ARCHIVE TAB ===== -->
+    <div class="tab-panel" id="tab-archive">
+      <div class="topbar">
+        <div><h1>🗄️ Order Archive</h1><p>Manually archived orders. Filter by date and print as PDF.</p></div>
+        <button class="save-btn no-print" onclick="printArchive()">🖨️ Print to PDF</button>
+      </div>
+      <div class="arch-date-row no-print">
+        <label>From:</label>
+        <input type="date" id="arch-from">
+        <label>To:</label>
+        <input type="date" id="arch-to">
+        <button class="save-btn" style="padding:8px 16px;" onclick="filterArchive()">🔍 Filter</button>
+        <button class="save-btn" style="background:var(--text-mid);padding:8px 16px;" onclick="loadArchive(true)">Show All</button>
+      </div>
+      <div id="archive-list"><p class="loading-text">Click "Show All" or use date filter to load archived orders.</p></div>
     </div>
 
   </div><!-- end main-content -->
@@ -485,9 +529,10 @@ function showTab(tab) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   const items = document.querySelectorAll('.nav-item');
-  const tabMap = { overview:0, settings:1, products:2, delivery:3, orders:4 };
+  const tabMap = { overview:0, settings:1, products:2, delivery:3, orders:4, archive:5 };
   if (tabMap[tab] !== undefined) items[tabMap[tab]].classList.add('active');
-  if (tab === 'orders') loadOrders();
+  if (tab === 'orders') { stopNotificationSound(); loadOrders(); }
+  if (tab === 'archive') loadArchive(true);
 }
 
 // ============================================================
@@ -510,18 +555,20 @@ async function loadAllData() {
     const [settSnap, delSnap, ordersSnap] = await Promise.all([
       db.collection('site').doc('settings').get(),
       db.collection('site').doc('delivery').get(),
-      db.collection('orders').orderBy('createdAt','desc').limit(50).get()
+      db.collection('orders').orderBy('createdAt','desc').limit(100).get()
     ]);
     if (settSnap.exists) populateSettings(settSnap.data());
     if (delSnap.exists)  populateDelivery(delSnap.data());
-    allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => !o.archived);
     renderOrders(allOrders);
     updateStats();
+    // Seed known IDs then start real-time listener
+    ordersSnap.docs.forEach(d => knownOrderIds.add(d.id));
+    startOrderListener();
   } catch(e) {
     showToast('Could not load data from Firebase. Check your config.', 'error');
     console.error(e);
   }
-  // Load dynamic products & categories
   loadProductsAndCategories();
 }
 
@@ -843,23 +890,25 @@ function filterOrders(status) {
 
 function renderOrders(orders) {
   const container = document.getElementById('orders-list');
-  if (!orders.length) { container.innerHTML = '<p class="loading-text">No orders found.</p>'; return; }
+  const visible = orders.filter(o => !o.archived);
+  if (!visible.length) { container.innerHTML = '<p class="loading-text">No orders found.</p>'; return; }
 
   const legacyLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
-  const statusClass  = { Pending:'badge-pending', Confirmed:'badge-confirmed', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
+  const statusClass  = { Pending:'badge-pending', Confirmed:'badge-confirmed', Preparing:'badge-preparing', 'Out for Delivery':'badge-out-for-delivery', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
 
-  container.innerHTML = orders.map(order => {
+  container.innerHTML = visible.map(order => {
     const rawProds = order.products || order.items || {};
     const prodTags = Array.isArray(rawProds)
       ? rawProds.map(p => `<span class="order-product-tag">${p.icon || ''} ${p.name} x${p.qty}</span>`).join('')
       : Object.entries(rawProds).filter(([,qty]) => qty > 0)
           .map(([k, qty]) => `<span class="order-product-tag">${legacyLabels[k] || k} x${qty}</span>`).join('');
     const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) : (order.createdAt || '—');
+    const shortId = order.id.slice(-8).toUpperCase();
     return `
       <div class="order-card" id="order-${order.id}">
         <div class="order-header">
           <div>
-            <div class="order-name">👤 ${order.name}</div>
+            <div class="order-name">👤 ${order.name} <span style="font-size:.72rem;color:var(--text-light);font-weight:400;">#${shortId}</span></div>
             <div class="order-date">📅 Ordered: ${date} &nbsp;|&nbsp; Deliver on: ${order.date || '—'} ${order.time ? '| ' + order.time : ''}</div>
           </div>
           <span class="order-badge ${statusClass[order.status] || 'badge-pending'}">${order.status || 'Pending'}</span>
@@ -873,12 +922,15 @@ function renderOrders(orders) {
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;">
           <label style="font-size:.78rem;color:var(--text-mid);">Update Status:</label>
           <select class="status-select" id="status-${order.id}">
-            <option ${order.status==='Pending'   ?'selected':''}>Pending</option>
-            <option ${order.status==='Confirmed' ?'selected':''}>Confirmed</option>
-            <option ${order.status==='Delivered' ?'selected':''}>Delivered</option>
-            <option ${order.status==='Cancelled' ?'selected':''}>Cancelled</option>
+            <option ${order.status==='Pending'          ?'selected':''}>Pending</option>
+            <option ${order.status==='Confirmed'        ?'selected':''}>Confirmed</option>
+            <option ${order.status==='Preparing'        ?'selected':''}>Preparing</option>
+            <option ${order.status==='Out for Delivery' ?'selected':''}>Out for Delivery</option>
+            <option ${order.status==='Delivered'        ?'selected':''}>Delivered</option>
+            <option ${order.status==='Cancelled'        ?'selected':''}>Cancelled</option>
           </select>
-          <button class="update-status-btn" onclick="updateOrderStatus('${order.id}')">Update</button>
+          <button class="update-status-btn" onclick="updateOrderStatus('${order.id}')">✔ Update</button>
+          <button class="archive-btn" onclick="archiveOrder('${order.id}','${order.name.replace(/'/g,"\\'")}')">🗄️ Archive</button>
         </div>
       </div>`;
   }).join('');
@@ -913,12 +965,236 @@ async function updateOrderStatus(orderId) {
 
 async function loadOrders() {
   try {
-    const snap = await db.collection('orders').orderBy('createdAt', 'desc').limit(100).get();
-    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await db.collection('orders').orderBy('createdAt', 'desc').limit(200).get();
+    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => !o.archived);
     filterOrders(currentFilter);
     updateStats();
     showToast('Orders refreshed.');
   } catch(e) { showToast('❌ Could not load orders: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// SOUND NOTIFICATION SYSTEM
+// ============================================================
+let knownOrderIds   = new Set();
+let soundActive     = false;
+let beepInterval    = null;
+let audioCtx        = null;
+let orderUnsubscribe = null;
+
+// Initialize AudioContext on first user click (browser requirement)
+document.addEventListener('click', function() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+});
+
+function playBeepOnce() {
+  if (!audioCtx) return;
+  try {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.7);
+  } catch(e) {}
+}
+
+function startNotificationSound() {
+  if (soundActive) return;
+  soundActive = true;
+  playBeepOnce();
+  beepInterval = setInterval(playBeepOnce, 4000);
+  const ind = document.getElementById('notif-indicator');
+  if (ind) ind.style.display = 'inline-flex';
+}
+
+function stopNotificationSound() {
+  soundActive = false;
+  clearInterval(beepInterval);
+  beepInterval = null;
+  const ind = document.getElementById('notif-indicator');
+  if (ind) ind.style.display = 'none';
+}
+
+function startOrderListener() {
+  if (orderUnsubscribe) orderUnsubscribe();
+  orderUnsubscribe = db.collection('orders').onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        const id   = change.doc.id;
+        const data = change.doc.data();
+        if (!knownOrderIds.has(id)) {
+          // Truly new order (arrived after initial load)
+          if (knownOrderIds.size > 0 && !data.archived && (!data.status || data.status === 'Pending')) {
+            startNotificationSound();
+            showToast('🔔 New order from ' + (data.name || 'a customer') + '!', 'success');
+            allOrders.unshift({ id, ...data });
+            updateStats();
+          }
+          knownOrderIds.add(id);
+        }
+      }
+    });
+  });
+}
+
+// ============================================================
+// ARCHIVE
+// ============================================================
+let archivedOrders     = [];
+let archivedFiltered   = [];
+
+async function archiveOrder(orderId, name) {
+  if (!confirm('Move order from "' + name + '" to Archive?\n\nIt will be removed from the main Orders view.')) return;
+  try {
+    await db.collection('orders').doc(orderId).update({
+      archived: true,
+      archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    allOrders = allOrders.filter(o => o.id !== orderId);
+    filterOrders(currentFilter);
+    updateStats();
+    showToast('✅ Order archived.');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
+}
+
+async function loadArchive(showAll) {
+  const el = document.getElementById('archive-list');
+  if (!el) return;
+  el.innerHTML = '<p class="loading-text">Loading archived orders...</p>';
+  try {
+    const snap = await db.collection('orders').where('archived', '==', true).get();
+    archivedOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const da = a.createdAt?.toDate?.() || new Date(0);
+        const db2 = b.createdAt?.toDate?.() || new Date(0);
+        return db2 - da;
+      });
+    archivedFiltered = archivedOrders;
+    renderArchivedOrders(archivedFiltered);
+  } catch(e) {
+    el.innerHTML = '<p class="loading-text">Could not load archive: ' + e.message + '</p>';
+  }
+}
+
+function filterArchive() {
+  const from = document.getElementById('arch-from')?.value;
+  const to   = document.getElementById('arch-to')?.value;
+  if (!from && !to) { archivedFiltered = archivedOrders; }
+  else {
+    const fromD = from ? new Date(from + 'T00:00:00') : new Date(0);
+    const toD   = to   ? new Date(to   + 'T23:59:59') : new Date(9999, 0);
+    archivedFiltered = archivedOrders.filter(o => {
+      const d = o.createdAt?.toDate?.() || new Date(o.createdAt || 0);
+      return d >= fromD && d <= toD;
+    });
+  }
+  if (!archivedOrders.length) { loadArchive(true).then(() => filterArchive()); return; }
+  renderArchivedOrders(archivedFiltered);
+}
+
+function renderArchivedOrders(orders) {
+  const el = document.getElementById('archive-list');
+  if (!el) return;
+  if (!orders.length) { el.innerHTML = '<p class="loading-text">No archived orders found for the selected period.</p>'; return; }
+
+  const legacyLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
+  const statusClass  = { Pending:'badge-pending', Confirmed:'badge-confirmed', Preparing:'badge-preparing', 'Out for Delivery':'badge-out-for-delivery', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
+
+  el.innerHTML = `<p style="font-size:.82rem;color:var(--text-light);margin-bottom:12px;">${orders.length} archived order${orders.length!==1?'s':''}</p>` +
+    orders.map(order => {
+      const rawProds = order.products || order.items || {};
+      const prodText = Array.isArray(rawProds)
+        ? rawProds.map(p => `${p.icon||''} ${p.name} x${p.qty}`).join(', ')
+        : Object.entries(rawProds).filter(([,qty])=>qty>0).map(([k,qty])=>`${legacyLabels[k]||k} x${qty}`).join(', ');
+      const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : (order.createdAt||'—');
+      const shortId = order.id.slice(-8).toUpperCase();
+      return `
+        <div class="order-card" style="border-left:3px solid var(--text-light);">
+          <div class="order-header">
+            <div>
+              <div class="order-name">👤 ${order.name} <span style="font-size:.72rem;color:var(--text-light);font-weight:400;">#${shortId}</span></div>
+              <div class="order-date">📅 ${date} &nbsp;|&nbsp; Deliver: ${order.date||'—'}</div>
+            </div>
+            <span class="order-badge ${statusClass[order.status]||'badge-pending'}">${order.status||'Pending'}</span>
+          </div>
+          <div class="order-detail">
+            <div>📞 ${order.phone} &nbsp;|&nbsp; 📍 ${order.address} &nbsp;|&nbsp; 💳 ${order.payment}</div>
+            ${order.notes?'<div>📝 '+order.notes+'</div>':''}
+          </div>
+          <div style="font-size:.78rem;color:var(--text-mid);margin-top:8px;">${prodText||'—'}</div>
+          <div style="margin-top:10px;" class="no-print">
+            <button class="del-btn" style="font-size:.75rem;" onclick="unarchiveOrder('${order.id}')">↩ Unarchive</button>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+async function unarchiveOrder(orderId) {
+  if (!confirm('Move this order back to the main Orders list?')) return;
+  try {
+    await db.collection('orders').doc(orderId).update({ archived: false, archivedAt: firebase.firestore.FieldValue.deleteField() });
+    archivedOrders = archivedOrders.filter(o => o.id !== orderId);
+    archivedFiltered = archivedFiltered.filter(o => o.id !== orderId);
+    renderArchivedOrders(archivedFiltered);
+    showToast('✅ Order restored to Orders list.');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
+}
+
+function printArchive() {
+  const from = document.getElementById('arch-from')?.value || '';
+  const to   = document.getElementById('arch-to')?.value   || '';
+  const list = archivedFiltered.length ? archivedFiltered : archivedOrders;
+  if (!list.length) { alert('No archived orders to print. Load the archive first.'); return; }
+
+  const legacyLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
+  const rows = list.map(o => {
+    const rawProds = o.products || o.items || {};
+    const prodText = Array.isArray(rawProds)
+      ? rawProds.map(p=>`${p.name} x${p.qty}`).join(', ')
+      : Object.entries(rawProds).filter(([,qty])=>qty>0).map(([k,qty])=>`${legacyLabels[k]||k} x${qty}`).join(', ');
+    const date = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString('en-PH') : (o.createdAt||'—');
+    return `<tr>
+      <td>#${o.id.slice(-8).toUpperCase()}</td>
+      <td>${date}</td>
+      <td>${o.name}</td>
+      <td>${o.phone}</td>
+      <td>${o.address}</td>
+      <td>${o.date||'—'}</td>
+      <td>${prodText}</td>
+      <td>${o.payment}</td>
+      <td>${o.status||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const period = (from||to) ? ` (${from||'start'} to ${to||'end'})` : '';
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Ice Master – Order Archive${period}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;padding:20px;}
+    h1{color:#0077B6;font-size:16px;}
+    p{color:#777;font-size:10px;margin:4px 0 16px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#0077B6;color:#fff;padding:7px 8px;text-align:left;font-size:10px;}
+    td{padding:6px 8px;border-bottom:1px solid #e0e0e0;font-size:10px;}
+    tr:nth-child(even) td{background:#f0f8ff;}
+  </style></head><body>
+  <h1>🧊 Ice Master — Order Archive${period}</h1>
+  <p>Printed: ${new Date().toLocaleDateString('en-PH',{dateStyle:'full'})} &nbsp;|&nbsp; Total: ${list.length} order${list.length!==1?'s':''}</p>
+  <table>
+    <thead><tr><th>Order ID</th><th>Date Ordered</th><th>Customer</th><th>Phone</th><th>Address</th><th>Delivery Date</th><th>Products</th><th>Payment</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 </script>
 </body>
