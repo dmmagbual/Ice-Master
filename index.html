@@ -251,6 +251,57 @@
   .submit-btn:hover { background:var(--primary-dark); transform:translateY(-2px); }
   .success-msg { display:none; background:#e8f8ef; border:1.5px solid #5cb85c; color:#2d6a2d; padding:16px; border-radius:8px; text-align:center; margin-top:16px; font-weight:600; }
 
+  /* ===== ORDER SUCCESS MODAL ===== */
+  .order-success-overlay {
+    position:fixed; inset:0; z-index:9999;
+    background:rgba(0,30,60,0.72);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    animation:fadeInOverlay .35s ease;
+  }
+  @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
+  .order-success-card {
+    background:#fff; border-radius:24px;
+    padding:44px 36px 36px; max-width:460px; width:100%;
+    text-align:center; position:relative;
+    box-shadow:0 24px 70px rgba(0,0,0,0.28);
+    animation:slideUpCard .35s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes slideUpCard { from{transform:translateY(50px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .order-success-icon {
+    width:88px; height:88px; border-radius:50%;
+    background:linear-gradient(135deg,#43c75a,#2ea84a);
+    display:flex; align-items:center; justify-content:center;
+    font-size:40px; margin:0 auto 20px;
+    box-shadow:0 8px 28px rgba(67,199,90,0.4);
+  }
+  .order-success-card h2 { font-size:1.65rem; color:var(--text-dark); margin-bottom:8px; }
+  .order-success-card > p { color:var(--text-mid); font-size:.95rem; margin-bottom:20px; line-height:1.5; }
+  .order-success-id-box {
+    background:var(--light-bg); border:2.5px dashed var(--primary);
+    border-radius:14px; padding:18px 20px; margin-bottom:24px;
+  }
+  .order-success-id-box small { display:block; font-size:.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:6px; }
+  .order-success-id-box .order-id-display {
+    font-size:2.2rem; font-weight:900; color:var(--primary);
+    letter-spacing:6px; line-height:1;
+  }
+  .order-success-id-box .order-id-hint { display:block; font-size:.75rem; color:var(--text-light); margin-top:8px; }
+  .btn-track-now {
+    width:100%; background:var(--primary); color:#fff;
+    border:none; padding:16px; border-radius:50px;
+    font-size:1.05rem; font-weight:700; cursor:pointer;
+    transition:all .2s; letter-spacing:.3px;
+    box-shadow:0 4px 16px rgba(0,119,182,0.35);
+  }
+  .btn-track-now:hover { background:var(--primary-dark); transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,119,182,0.4); }
+  .btn-close-modal {
+    width:100%; background:transparent; color:var(--text-light);
+    border:1.5px solid var(--border); padding:13px; border-radius:50px;
+    font-size:.9rem; cursor:pointer; margin-top:10px; transition:.2s;
+  }
+  .btn-close-modal:hover { background:var(--light-bg); color:var(--text-mid); border-color:#b0c8df; }
+
   /* ===== CONTACT ===== */
   .contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; max-width:900px; margin:0 auto; }
   @media(max-width:700px){ .contact-grid { grid-template-columns:1fr; } }
@@ -585,7 +636,17 @@
         <h2>Track Your Order</h2>
         <p>Enter your phone number or Order ID to see your order status.</p>
       </div>
-      <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;margin-bottom:24px;">
+      <!-- Auto-loaded order banner (visible when coming from order form) -->
+      <div id="track-my-order-banner" style="display:none;background:linear-gradient(135deg,#e8f8ef,#d4f0df);border:1.5px solid #5cb85c;border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <span style="font-size:.8rem;color:#2d6a2d;font-weight:600;display:block;">✅ Showing your order</span>
+          <span id="track-my-order-id" style="font-size:1rem;font-weight:800;color:var(--primary);letter-spacing:2px;"></span>
+        </div>
+        <button onclick="clearMyOrder()" style="background:none;border:1.5px solid #5cb85c;color:#2d6a2d;padding:6px 12px;border-radius:20px;cursor:pointer;font-size:.8rem;font-weight:600;white-space:nowrap;">Search Another</button>
+      </div>
+
+      <!-- Search box -->
+      <div id="track-search-box" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;margin-bottom:24px;">
         <div style="display:flex;gap:10px;align-items:stretch;">
           <input type="text" id="track-input" placeholder="Phone number or Order ID (e.g. ABC12345)"
             style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;font-size:.95rem;outline:none;font-family:inherit;"
@@ -977,12 +1038,10 @@ async function submitOrder(e) {
       const docRef = await db.collection('orders').add(orderData);
       orderId = shortId;
     }
-    const msgEl = document.getElementById('successMsg');
-    msgEl.innerHTML = `✅ Order received! <strong>Your Order ID: #${orderId}</strong><br>
-      <span style="font-size:.85rem;">Save this ID to track your order. We'll call or text you shortly to confirm.</span>
-      <br><a href="#" onclick="showPage('track');document.getElementById('track-input').value='${orderId}';trackOrder();"
-        style="color:var(--primary);font-weight:600;font-size:.85rem;">📍 Track this order →</a>`;
-    msgEl.style.display = 'block';
+    // Store shortId for auto-tracking
+    window._autoTrackId = orderId;
+
+    // Reset form first
     document.getElementById('orderForm').reset();
     btn.textContent = '✅ Order Submitted!';
     btn.style.background = '#5cb85c';
@@ -992,13 +1051,62 @@ async function submitOrder(e) {
     setTimeout(() => {
       btn.textContent = '📦 Submit Order Request';
       btn.style.background = ''; btn.disabled = false;
-      msgEl.style.display = 'none';
-    }, 12000);
+    }, 8000);
+
+    // Show full-screen success modal (stays until dismissed)
+    showOrderSuccessModal(orderId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch(err) {
     alert('There was an error submitting your order. Please call us directly.\nError: ' + err.message);
     btn.textContent = '📦 Submit Order Request';
     btn.style.background = ''; btn.disabled = false;
+  }
+}
+
+// ============================================================
+// ORDER SUCCESS MODAL
+// ============================================================
+function showOrderSuccessModal(shortId) {
+  // Remove any existing modal
+  const existing = document.getElementById('order-success-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'order-success-overlay';
+  overlay.className = 'order-success-overlay';
+  overlay.innerHTML = `
+    <div class="order-success-card">
+      <div class="order-success-icon">✅</div>
+      <h2>Order Placed!</h2>
+      <p>We received your order and will call or text you shortly to confirm your delivery.</p>
+      <div class="order-success-id-box">
+        <small>Your Order ID</small>
+        <div class="order-id-display">#${shortId}</div>
+        <span class="order-id-hint">💡 Screenshot this — you can use it to track your order anytime</span>
+      </div>
+      <button class="btn-track-now" onclick="closeOrderModal(); showPage('track');">
+        📍 Track My Order Now
+      </button>
+      <button class="btn-close-modal" onclick="closeOrderModal()">
+        ✕ Close &nbsp;·&nbsp; Continue Shopping
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Close when clicking outside the card
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeOrderModal();
+  });
+}
+
+function closeOrderModal() {
+  const overlay = document.getElementById('order-success-overlay');
+  if (overlay) {
+    overlay.style.animation = 'none';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity .25s';
+    setTimeout(() => overlay.remove(), 260);
   }
 }
 
@@ -1012,6 +1120,14 @@ function showPage(pageId) {
   const navLink = document.getElementById('nav-' + pageId);
   if (navLink) navLink.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // If navigating to Track page and we have an order from this session, auto-load it
+  if (pageId === 'track' && window._autoTrackId) {
+    const input = document.getElementById('track-input');
+    if (input) input.value = window._autoTrackId;
+    // Small delay to let the page render first
+    setTimeout(() => trackOrder(), 250);
+  }
 }
 
 function toggleMenu() {
@@ -1056,6 +1172,19 @@ function clearTrackingListeners() {
   trackingUnsubscribers = [];
 }
 
+function clearMyOrder() {
+  // Reset auto-track state and show normal search UI
+  window._autoTrackId = null;
+  const banner = document.getElementById('track-my-order-banner');
+  const searchBox = document.getElementById('track-search-box');
+  const input = document.getElementById('track-input');
+  if (banner) banner.style.display = 'none';
+  if (searchBox) searchBox.style.display = 'block';
+  if (input) input.value = '';
+  clearTrackingListeners();
+  document.getElementById('track-result').innerHTML = '';
+}
+
 async function trackOrder() {
   const query = (document.getElementById('track-input')?.value || '').trim();
   const el    = document.getElementById('track-result');
@@ -1067,6 +1196,20 @@ async function trackOrder() {
   if (!firebaseReady) {
     el.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px;">Service unavailable. Try again later.</p>';
     return;
+  }
+
+  // If this is the customer's own order from this session, show banner & collapse search
+  const isMyOrder = window._autoTrackId && query.toUpperCase() === window._autoTrackId.toUpperCase();
+  const banner = document.getElementById('track-my-order-banner');
+  const searchBox = document.getElementById('track-search-box');
+  if (isMyOrder && banner && searchBox) {
+    banner.style.display = 'flex';
+    searchBox.style.display = 'none';
+    const idEl = document.getElementById('track-my-order-id');
+    if (idEl) idEl.textContent = '#' + window._autoTrackId;
+  } else {
+    if (banner) banner.style.display = 'none';
+    if (searchBox) searchBox.style.display = 'block';
   }
 
   clearTrackingListeners();
