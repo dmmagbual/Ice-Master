@@ -405,20 +405,8 @@
       <h2>Ice Tubes & Purified Water</h2>
       <p>Available for pick-up or delivery in <span id="home-city2">your area</span>.</p>
     </div>
-    <div class="products-grid" style="max-width:760px;margin:0 auto;">
-      <div class="product-card featured">
-        <span class="featured-badge">BESTSELLER</span>
-        <div class="product-icon">🧊</div>
-        <h3>Ice Tube (1kg)</h3>
-        <div class="price-row"><span class="price" id="home-price-ice1kg">₱—</span><span class="price-unit">per bag</span></div>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">💧</div>
-        <h3>Purified Water (5-Gal)</h3>
-        <div class="price-row"><span class="price" id="home-price-water5gal">₱—</span><span class="price-unit">per jug</span></div>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
+    <div class="products-grid" style="max-width:760px;margin:0 auto;" id="home-products-preview">
+      <!-- Filled dynamically from Firestore products collection -->
     </div>
     <div style="text-align:center;margin-top:24px;">
       <a class="btn-outline" href="#" onclick="showPage('products')">See All Products & Pricing →</a>
@@ -463,77 +451,9 @@
       <p>All prices are in Philippine Peso (₱). Volume discounts available for bulk and regular orders.</p>
     </div>
 
-    <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:20px;text-align:center;">❄️ Ice Products</h3>
-    <div class="products-grid">
-      <div class="product-card featured">
-        <span class="featured-badge">BESTSELLER</span>
-        <div class="product-icon">🧊</div>
-        <h3>Ice Tube – 1kg Bag</h3>
-        <p class="desc" id="desc-ice1kg">Perfect for households, sari-sari stores, and small food stalls. Comes in sealed, hygienic plastic bags.</p>
-        <div class="price-row"><span class="price" id="price-ice1kg">₱—</span><span class="price-unit">/ bag</span></div>
-        <p class="product-note">Minimum order: 1 bag</p>
-        <ul class="product-features"><li>Food-grade, hygienic packaging</li><li>Made from purified water</li><li>Pick-up & delivery available</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">🧊</div>
-        <h3>Ice Tube – 5kg Bag</h3>
-        <p class="desc" id="desc-ice5kg">Ideal for restaurants, carinderias, fish vendors, and medium-scale food businesses.</p>
-        <div class="price-row"><span class="price" id="price-ice5kg">₱—</span><span class="price-unit">/ bag</span></div>
-        <p class="product-note">Minimum order: 1 bag</p>
-        <ul class="product-features"><li>Bulk packaging, better value</li><li>Sealed for maximum freshness</li><li>Pick-up & delivery available</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">🧊</div>
-        <h3>Ice Tube – 10kg Bag</h3>
-        <p class="desc" id="desc-ice10kg">Best for resorts, meat shops, large restaurants, and event catering. Great value per kilo.</p>
-        <div class="price-row"><span class="price" id="price-ice10kg">₱—</span><span class="price-unit">/ bag</span></div>
-        <p class="product-note">Minimum order: 1 bag</p>
-        <ul class="product-features"><li>Commercial-size bag</li><li>Best price per kilogram</li><li>Bulk order discounts available</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">🧊</div>
-        <h3>Ice Block</h3>
-        <p class="desc" id="desc-iceblock">Large block ice for fish preservation, meat coolers, and events requiring extended cooling.</p>
-        <div class="price-row"><span class="price" id="price-iceblock">₱—</span><span class="price-unit">/ block</span></div>
-        <p class="product-note" id="note-iceblock">Ideal for commercial use</p>
-        <ul class="product-features"><li>Long-lasting cooling</li><li>Ideal for fish & seafood vendors</li><li>Event & party cooling</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-    </div>
-
-    <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);margin:40px 0 20px;text-align:center;">💧 Purified Water Products</h3>
-    <div class="products-grid">
-      <div class="product-card featured">
-        <span class="featured-badge">POPULAR</span>
-        <div class="product-icon">💧</div>
-        <h3>Purified Water Refill – 5 Gallon</h3>
-        <p class="desc" id="desc-waterrefill">Bring your own 5-gallon container and get it refilled with our multi-stage purified water.</p>
-        <div class="price-row"><span class="price" id="price-waterrefill">₱—</span><span class="price-unit">/ refill</span></div>
-        <p class="product-note">Container not included</p>
-        <ul class="product-features"><li>Multi-stage filtration</li><li>UV sterilized</li><li>DOH compliant</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">🫙</div>
-        <h3>Purified Water – 5 Gallon Jug</h3>
-        <p class="desc" id="desc-waterjug">Complete 5-gallon jug with purified water. Perfect for households and offices.</p>
-        <div class="price-row"><span class="price" id="price-waterjug">₱—</span><span class="price-unit">/ jug</span></div>
-        <p class="product-note">Container deposit: <span id="deposit-waterjug">₱—</span> (returnable)</p>
-        <ul class="product-features"><li>Sealed container</li><li>Free delivery within <span id="prod-city">area</span></li><li>Returnable jug</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
-      <div class="product-card">
-        <div class="product-icon">🧴</div>
-        <h3>Purified Water – 1 Liter Bottle</h3>
-        <p class="desc" id="desc-water1l">Individually sealed 1-liter bottles, perfect for on-the-go, offices, and retail reselling.</p>
-        <div class="price-row"><span class="price" id="price-water1l">₱—</span><span class="price-unit">/ bottle</span></div>
-        <p class="product-note">Minimum order: <span id="minorder-water1l">—</span> bottles</p>
-        <ul class="product-features"><li>Individually sealed</li><li>Great for retail resellers</li><li>Bulk discounts available</li></ul>
-        <button class="btn-card" onclick="showPage('order')">Order Now</button>
-      </div>
+    <!-- Dynamic products rendered here by JS -->
+    <div id="dynamic-products-container">
+      <p style="text-align:center;color:var(--text-light);padding:40px 0;">Loading products...</p>
     </div>
 
     <!-- DELIVERY FEES -->
@@ -624,13 +544,9 @@
         </div>
 
         <h4 style="color:var(--primary);margin:24px 0 16px;">🧊 Product Selection</h4>
-        <div class="order-products">
-          <div class="order-product-row"><div><label>Ice Tube – 1kg Bag</label><div class="price-hint" id="oh-ice1kg">₱—</div></div><input type="number" id="qty-ice1kg" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">bags</span></div>
-          <div class="order-product-row"><div><label>Ice Tube – 5kg Bag</label><div class="price-hint" id="oh-ice5kg">₱—</div></div><input type="number" id="qty-ice5kg" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">bags</span></div>
-          <div class="order-product-row"><div><label>Ice Tube – 10kg Bag</label><div class="price-hint" id="oh-ice10kg">₱—</div></div><input type="number" id="qty-ice10kg" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">bags</span></div>
-          <div class="order-product-row"><div><label>Ice Block</label><div class="price-hint" id="oh-iceblock">₱—</div></div><input type="number" id="qty-iceblock" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">blocks</span></div>
-          <div class="order-product-row"><div><label>Purified Water – 5-Gal Refill</label><div class="price-hint" id="oh-waterrefill">₱—</div></div><input type="number" id="qty-waterrefill" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">containers</span></div>
-          <div class="order-product-row"><div><label>Purified Water – 5-Gal Jug (w/ container)</label><div class="price-hint" id="oh-waterjug">₱—</div></div><input type="number" id="qty-waterjug" min="0" value="0"><span style="font-size:.8rem;color:var(--text-light);">jugs</span></div>
+        <div class="order-products" id="order-products-dynamic">
+          <!-- Filled dynamically from Firestore products collection -->
+          <p style="color:var(--text-light);font-size:.85rem;text-align:center;padding:12px;">Loading products...</p>
         </div>
 
         <div class="form-group form-full" style="margin-top:8px;">
@@ -779,23 +695,116 @@ try {
 // ============================================================
 // LOAD SITE CONTENT FROM FIRESTORE
 // ============================================================
+let siteCategories = [];
+let siteProducts   = [];
+
 async function loadSiteContent() {
   if (!firebaseReady) { hideLoader(); return; }
   try {
-    const [settingsSnap, productsSnap, deliverySnap] = await Promise.all([
+    const [settingsSnap, deliverySnap] = await Promise.all([
       db.collection('site').doc('settings').get(),
-      db.collection('site').doc('products').get(),
       db.collection('site').doc('delivery').get()
     ]);
-
     if (settingsSnap.exists) applySettings(settingsSnap.data());
-    if (productsSnap.exists) applyProducts(productsSnap.data());
     if (deliverySnap.exists) applyDelivery(deliverySnap.data());
-
   } catch(e) {
-    console.warn('Could not load content from Firebase:', e);
+    console.warn('Could not load site settings from Firebase:', e);
+  }
+  // Load dynamic products & categories separately
+  try {
+    const [catSnap, prodSnap] = await Promise.all([
+      db.collection('categories').get(),
+      db.collection('products').get()
+    ]);
+    siteCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                                 .sort((a, b) => (a.order || 0) - (b.order || 0));
+    siteProducts   = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                                  .sort((a, b) => (a.order || 0) - (b.order || 0));
+    renderProductsPage();
+    renderHomePreview();
+    renderOrderForm();
+  } catch(e) {
+    console.warn('Could not load products from Firebase:', e);
+    const pc = document.getElementById('dynamic-products-container');
+    if (pc) pc.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:40px;">Products coming soon. Contact us for pricing.</p>';
   }
   hideLoader();
+}
+
+function renderProductsPage() {
+  const container = document.getElementById('dynamic-products-container');
+  if (!container) return;
+  if (!siteProducts.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:40px 0;">Products coming soon. Contact us for pricing.</p>';
+    return;
+  }
+  const fmt = price => price ? '₱' + Number(price).toLocaleString() : '₱—';
+  // Group by category
+  const groups = {};
+  siteProducts.forEach(p => {
+    const c = p.category || 'Products';
+    if (!groups[c]) groups[c] = [];
+    groups[c].push(p);
+  });
+  container.innerHTML = Object.entries(groups).map(([catName, prods]) => {
+    const catData = siteCategories.find(c => c.name === catName);
+    return `
+      <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);margin:40px 0 20px;text-align:center;">
+        ${catData?.icon || '📦'} ${catName}
+      </h3>
+      <div class="products-grid">
+        ${prods.map((p, idx) => `
+          <div class="product-card${idx === 0 ? ' featured' : ''}">
+            ${idx === 0 ? '<span class="featured-badge">POPULAR</span>' : ''}
+            <div class="product-icon">${p.icon || '📦'}</div>
+            <h3>${p.name}</h3>
+            <p class="desc">${p.description || ''}</p>
+            <div class="price-row">
+              <span class="price">${fmt(p.price)}</span>
+              <span class="price-unit">/ ${p.unit || 'pc'}</span>
+            </div>
+            <button class="btn-card" onclick="showPage('order')">Order Now</button>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+}
+
+function renderHomePreview() {
+  const container = document.getElementById('home-products-preview');
+  if (!container) return;
+  if (!siteProducts.length) { container.innerHTML = ''; return; }
+  const fmt = price => price ? '₱' + Number(price).toLocaleString() : '₱—';
+  const preview = siteProducts.slice(0, 2);
+  container.innerHTML = preview.map((p, idx) => `
+    <div class="product-card${idx === 0 ? ' featured' : ''}">
+      ${idx === 0 ? '<span class="featured-badge">BESTSELLER</span>' : ''}
+      <div class="product-icon">${p.icon || '📦'}</div>
+      <h3>${p.name}</h3>
+      <div class="price-row">
+        <span class="price">${fmt(p.price)}</span>
+        <span class="price-unit">per ${p.unit || 'pc'}</span>
+      </div>
+      <button class="btn-card" onclick="showPage('order')">Order Now</button>
+    </div>`).join('');
+}
+
+function renderOrderForm() {
+  const container = document.getElementById('order-products-dynamic');
+  if (!container) return;
+  if (!siteProducts.length) {
+    container.innerHTML = '<p style="color:var(--text-light);font-size:.85rem;text-align:center;padding:12px;">No products available yet.</p>';
+    return;
+  }
+  const fmt = price => price ? '₱' + Number(price).toLocaleString() : '₱—';
+  container.innerHTML = siteProducts.map(p => `
+    <div class="order-product-row">
+      <div>
+        <label>${p.icon || '📦'} ${p.name}</label>
+        <div class="price-hint">${fmt(p.price)} / ${p.unit || 'pc'}</div>
+      </div>
+      <input type="number" id="qty-${p.id}" min="0" value="0">
+      <span style="font-size:.8rem;color:var(--text-light);">${p.unit || 'pc'}(s)</span>
+    </div>`).join('');
 }
 
 function applySettings(s) {
@@ -862,28 +871,6 @@ function applySettings(s) {
   set('footer-year', new Date().getFullYear());
 }
 
-function applyProducts(p) {
-  const fmt = (price) => price ? '₱' + Number(price).toLocaleString() : '₱—';
-
-  const setPrice = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = fmt(val);
-  };
-  const setText = (id, val) => { if (val && document.getElementById(id)) document.getElementById(id).textContent = val; };
-
-  // Ice products
-  if (p.ice1kg)      { setPrice('price-ice1kg', p.ice1kg.price);    setPrice('home-price-ice1kg', p.ice1kg.price);  setPrice('oh-ice1kg', p.ice1kg.price); setText('desc-ice1kg', p.ice1kg.description); }
-  if (p.ice5kg)      { setPrice('price-ice5kg', p.ice5kg.price);    setPrice('oh-ice5kg', p.ice5kg.price);          setText('desc-ice5kg', p.ice5kg.description); }
-  if (p.ice10kg)     { setPrice('price-ice10kg', p.ice10kg.price);  setPrice('oh-ice10kg', p.ice10kg.price);        setText('desc-ice10kg', p.ice10kg.description); }
-  if (p.iceBlock)    { setPrice('price-iceblock', p.iceBlock.price); setPrice('oh-iceblock', p.iceBlock.price);     setText('desc-iceblock', p.iceBlock.description); setText('note-iceblock', p.iceBlock.note || ''); }
-
-  // Water products
-  if (p.waterRefill) { setPrice('price-waterrefill', p.waterRefill.price); setPrice('home-price-water5gal', p.waterRefill.price); setPrice('oh-waterrefill', p.waterRefill.price); setText('desc-waterrefill', p.waterRefill.description); }
-  if (p.waterJug)    { setPrice('price-waterjug', p.waterJug.price);    setPrice('oh-waterjug', p.waterJug.price); setText('desc-waterjug', p.waterJug.description);
-                       const dep = document.getElementById('deposit-waterjug'); if (dep) dep.textContent = fmt(p.waterJug.deposit); }
-  if (p.water1L)     { setPrice('price-water1l', p.water1L.price);      setText('desc-water1l', p.water1L.description);
-                       const mo = document.getElementById('minorder-water1l'); if (mo) mo.textContent = p.water1L.minOrder || '—'; }
-}
 
 function applyDelivery(d) {
   const table = document.getElementById('delivery-fees-table');
@@ -919,6 +906,27 @@ async function submitOrder(e) {
   btn.textContent = '⏳ Submitting...';
   btn.disabled = true;
 
+  // Collect quantities from dynamic product inputs
+  const items = siteProducts
+    .map(p => ({
+      id:   p.id,
+      name: p.name,
+      icon: p.icon || '',
+      price: p.price || 0,
+      unit: p.unit || 'pc',
+      qty:  parseInt(document.getElementById('qty-' + p.id)?.value) || 0
+    }))
+    .filter(p => p.qty > 0);
+
+  if (!items.length) {
+    alert('Please add at least one product to your order.');
+    btn.textContent = '📦 Submit Order Request';
+    btn.disabled = false;
+    return;
+  }
+
+  const total = items.reduce((sum, p) => sum + (p.price * p.qty), 0);
+
   const orderData = {
     name:     document.getElementById('order-name').value,
     phone:    document.getElementById('order-phone').value,
@@ -927,14 +935,8 @@ async function submitOrder(e) {
     time:     document.getElementById('order-time').value,
     payment:  document.getElementById('order-payment').value,
     notes:    document.getElementById('order-notes').value,
-    products: {
-      ice1kg:      parseInt(document.getElementById('qty-ice1kg').value) || 0,
-      ice5kg:      parseInt(document.getElementById('qty-ice5kg').value) || 0,
-      ice10kg:     parseInt(document.getElementById('qty-ice10kg').value) || 0,
-      iceBlock:    parseInt(document.getElementById('qty-iceblock').value) || 0,
-      waterRefill: parseInt(document.getElementById('qty-waterrefill').value) || 0,
-      waterJug:    parseInt(document.getElementById('qty-waterjug').value) || 0,
-    },
+    items,
+    total,
     status:    'Pending',
     createdAt: firebase.firestore ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
   };

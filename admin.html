@@ -164,6 +164,18 @@
 
   /* Loading state */
   .loading-text { color:var(--text-light); font-size:.88rem; font-style:italic; text-align:center; padding:20px; }
+
+  /* Dynamic product item rows */
+  .product-item-row { display:grid; grid-template-columns:40px 1fr auto auto; align-items:center; gap:12px; padding:12px 14px; background:var(--light-bg); border-radius:8px; border:1px solid var(--border); margin-bottom:8px; }
+  .prod-item-icon { font-size:1.4rem; text-align:center; }
+  .prod-item-name { font-size:.9rem; font-weight:700; color:var(--text-dark); }
+  .prod-item-desc { font-size:.75rem; color:var(--text-light); margin-top:2px; }
+  .prod-item-price { font-size:1rem; font-weight:900; color:var(--primary); white-space:nowrap; }
+  .prod-item-unit { font-size:.72rem; color:var(--text-light); font-weight:normal; }
+  .product-item-row .edit-form { grid-column:1/-1; }
+  .cat-group-header { font-size:.85rem; font-weight:700; color:var(--primary); padding-bottom:8px; border-bottom:2px solid var(--border); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .add-cat-row { display:grid; grid-template-columns:70px 1fr auto; gap:10px; margin-top:14px; align-items:center; }
+  @media(max-width:600px){ .product-item-row { grid-template-columns:auto 1fr; } }
 </style>
 </head>
 <body>
@@ -308,62 +320,64 @@
     <!-- ===== PRODUCTS TAB ===== -->
     <div class="tab-panel" id="tab-products">
       <div class="topbar">
-        <div><h1>🧊 Products & Pricing</h1><p>Update prices and descriptions. Changes appear instantly on your website.</p></div>
-        <button class="save-btn" onclick="saveProducts()">💾 Save Prices</button>
+        <div><h1>🧊 Products & Pricing</h1><p>Add, edit, or delete products. Organize them into categories.</p></div>
       </div>
 
+      <!-- CATEGORIES -->
       <div class="card">
-        <div class="card-title"><span>❄️</span> Ice Products</div>
-        <div class="product-row">
-          <div class="prod-icon">🧊</div>
-          <div><div class="prod-name">Ice Tube – 1kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice1kg-desc" rows="2" placeholder="Product description shown on website..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice1kg-price" placeholder="0" min="0" step="0.5"></div>
-          <div class="field-group"><label>Unit</label><input type="text" id="pd-ice1kg-unit" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
-        </div>
-        <div class="product-row">
-          <div class="prod-icon">🧊</div>
-          <div><div class="prod-name">Ice Tube – 5kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice5kg-desc" rows="2" placeholder="Product description..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice5kg-price" placeholder="0" min="0" step="0.5"></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
-        </div>
-        <div class="product-row">
-          <div class="prod-icon">🧊</div>
-          <div><div class="prod-name">Ice Tube – 10kg Bag</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-ice10kg-desc" rows="2" placeholder="Product description..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-ice10kg-price" placeholder="0" min="0" step="0.5"></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="bag" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
-        </div>
-        <div class="product-row">
-          <div class="prod-icon">🧊</div>
-          <div><div class="prod-name">Ice Block</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-iceblock-desc" rows="2" placeholder="Product description..."></textarea></div><div class="field-group" style="margin-top:8px;"><label>Note (e.g., weight info)</label><input type="text" id="pd-iceblock-note" placeholder="e.g., Approx. 25kg per block"></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-iceblock-price" placeholder="0" min="0" step="0.5"></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="block" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        <div class="card-title"><span>🏷️</span> Product Categories</div>
+        <div id="categories-list"><p class="loading-text">Loading categories...</p></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0 14px;">
+        <div style="font-size:.82rem;font-weight:600;color:var(--text-mid);margin-bottom:8px;">Add New Category</div>
+        <div class="add-cat-row">
+          <input type="text" id="new-cat-icon" placeholder="🧊 emoji" style="text-align:center;font-size:1.2rem;">
+          <input type="text" id="new-cat-name" placeholder="e.g., Ice Products, Purified Water">
+          <button class="save-btn" onclick="addCategory()">+ Add</button>
         </div>
       </div>
 
+      <!-- PRODUCTS LIST -->
       <div class="card">
-        <div class="card-title"><span>💧</span> Purified Water Products</div>
-        <div class="product-row">
-          <div class="prod-icon">💧</div>
-          <div><div class="prod-name">Purified Water Refill – 5 Gallon</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-waterrefill-desc" rows="2" placeholder="Product description..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-waterrefill-price" placeholder="0" min="0" step="0.5"></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="refill" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
+        <div class="card-title">
+          <span>📦</span> Products
+          <span id="products-count-badge" style="margin-left:auto;font-size:.78rem;font-weight:normal;color:var(--text-light);"></span>
         </div>
-        <div class="product-row">
-          <div class="prod-icon">🫙</div>
-          <div><div class="prod-name">Purified Water – 5 Gallon Jug (with container)</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-waterjug-desc" rows="2" placeholder="Product description..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-waterjug-price" placeholder="0" min="0" step="0.5"><div class="field-group" style="margin-top:8px;"><label>Deposit (₱)</label><input type="number" id="pd-waterjug-deposit" placeholder="0" min="0"></div></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="jug" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
-        </div>
-        <div class="product-row">
-          <div class="prod-icon">🧴</div>
-          <div><div class="prod-name">Purified Water – 1 Liter Bottle</div><div class="field-group" style="margin-top:8px;"><label>Description</label><textarea class="prod-desc-input" id="pd-water1l-desc" rows="2" placeholder="Product description..."></textarea></div></div>
-          <div class="field-group"><label>Price (₱)</label><input type="number" id="pd-water1l-price" placeholder="0" min="0" step="0.5"><div class="field-group" style="margin-top:8px;"><label>Min Order (bottles)</label><input type="number" id="pd-water1l-min" placeholder="e.g., 6" min="1"></div></div>
-          <div class="field-group"><label>Unit</label><input type="text" value="bottle" readonly style="background:#f5f7fa;color:var(--text-light);"></div>
-        </div>
+        <div id="products-list"><p class="loading-text">Loading products...</p></div>
       </div>
 
-      <div style="text-align:right;padding-top:8px;">
-        <button class="save-btn" onclick="saveProducts()">💾 Save All Prices</button>
+      <!-- ADD NEW PRODUCT -->
+      <div class="card">
+        <div class="card-title"><span>➕</span> Add New Product</div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label>Icon (emoji)</label>
+            <input type="text" id="np-icon" placeholder="🧊" style="font-size:1.2rem;text-align:center;max-width:70px;">
+          </div>
+          <div class="field-group">
+            <label>Product Name *</label>
+            <input type="text" id="np-name" placeholder="e.g., Ice Tube – 1kg Bag">
+          </div>
+          <div class="field-group">
+            <label>Category *</label>
+            <select id="np-category"><option value="">Select a category first...</option></select>
+            <span class="field-hint">Add categories above if none listed</span>
+          </div>
+          <div class="field-group">
+            <label>Price (₱) *</label>
+            <input type="number" id="np-price" placeholder="e.g., 25" min="0" step="0.5">
+          </div>
+          <div class="field-group">
+            <label>Unit (after price)</label>
+            <input type="text" id="np-unit" placeholder="e.g., bag, jug, bottle, block">
+          </div>
+        </div>
+        <div class="field-group" style="margin-top:12px;">
+          <label>Description</label>
+          <textarea id="np-desc" rows="2" placeholder="Short description shown on your website..."></textarea>
+        </div>
+        <div style="margin-top:14px;">
+          <button class="save-btn" onclick="addProduct()">➕ Add Product</button>
+        </div>
       </div>
     </div>
 
@@ -493,16 +507,13 @@ let deliveryFees = [];
 
 async function loadAllData() {
   try {
-    const [settSnap, prodSnap, delSnap, ordersSnap] = await Promise.all([
+    const [settSnap, delSnap, ordersSnap] = await Promise.all([
       db.collection('site').doc('settings').get(),
-      db.collection('site').doc('products').get(),
       db.collection('site').doc('delivery').get(),
       db.collection('orders').orderBy('createdAt','desc').limit(50).get()
     ]);
-
-    if (settSnap.exists)   populateSettings(settSnap.data());
-    if (prodSnap.exists)   populateProducts(prodSnap.data());
-    if (delSnap.exists)    populateDelivery(delSnap.data());
+    if (settSnap.exists) populateSettings(settSnap.data());
+    if (delSnap.exists)  populateDelivery(delSnap.data());
     allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderOrders(allOrders);
     updateStats();
@@ -510,6 +521,8 @@ async function loadAllData() {
     showToast('Could not load data from Firebase. Check your config.', 'error');
     console.error(e);
   }
+  // Load dynamic products & categories
+  loadProductsAndCategories();
 }
 
 function updateStats() {
@@ -558,36 +571,213 @@ async function saveSettings() {
 }
 
 // ============================================================
-// PRODUCTS
+// DYNAMIC PRODUCTS & CATEGORIES
 // ============================================================
-function populateProducts(p) {
-  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val ?? ''; };
-  if (p.ice1kg)      { set('pd-ice1kg-price', p.ice1kg.price);      set('pd-ice1kg-desc', p.ice1kg.description); }
-  if (p.ice5kg)      { set('pd-ice5kg-price', p.ice5kg.price);      set('pd-ice5kg-desc', p.ice5kg.description); }
-  if (p.ice10kg)     { set('pd-ice10kg-price', p.ice10kg.price);    set('pd-ice10kg-desc', p.ice10kg.description); }
-  if (p.iceBlock)    { set('pd-iceblock-price', p.iceBlock.price);  set('pd-iceblock-desc', p.iceBlock.description); set('pd-iceblock-note', p.iceBlock.note); }
-  if (p.waterRefill) { set('pd-waterrefill-price', p.waterRefill.price); set('pd-waterrefill-desc', p.waterRefill.description); }
-  if (p.waterJug)    { set('pd-waterjug-price', p.waterJug.price);  set('pd-waterjug-desc', p.waterJug.description); set('pd-waterjug-deposit', p.waterJug.deposit); }
-  if (p.water1L)     { set('pd-water1l-price', p.water1L.price);    set('pd-water1l-desc', p.water1L.description); set('pd-water1l-min', p.water1L.minOrder); }
+let categories = [];
+let products   = [];
+
+async function loadProductsAndCategories() {
+  try {
+    const [catSnap, prodSnap] = await Promise.all([
+      db.collection('categories').get(),
+      db.collection('products').get()
+    ]);
+    categories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    products   = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                              .sort((a, b) => (a.order || 0) - (b.order || 0));
+    renderCategories();
+    renderProducts();
+    populateCategoryDropdowns();
+    document.getElementById('ov-products').textContent = products.length;
+  } catch(e) {
+    console.error('Could not load products/categories:', e);
+    document.getElementById('products-list').innerHTML = '<p class="loading-text">Could not load products. Check Firestore rules.</p>';
+  }
 }
 
-async function saveProducts() {
-  const g  = (id) => document.getElementById(id)?.value?.trim() || '';
-  const gn = (id) => parseFloat(document.getElementById(id)?.value) || 0;
-  const data = {
-    ice1kg:      { price: gn('pd-ice1kg-price'),      description: g('pd-ice1kg-desc') },
-    ice5kg:      { price: gn('pd-ice5kg-price'),      description: g('pd-ice5kg-desc') },
-    ice10kg:     { price: gn('pd-ice10kg-price'),     description: g('pd-ice10kg-desc') },
-    iceBlock:    { price: gn('pd-iceblock-price'),    description: g('pd-iceblock-desc'),    note: g('pd-iceblock-note') },
-    waterRefill: { price: gn('pd-waterrefill-price'), description: g('pd-waterrefill-desc') },
-    waterJug:    { price: gn('pd-waterjug-price'),    description: g('pd-waterjug-desc'),    deposit: gn('pd-waterjug-deposit') },
-    water1L:     { price: gn('pd-water1l-price'),     description: g('pd-water1l-desc'),     minOrder: parseInt(document.getElementById('pd-water1l-min')?.value) || 1 },
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
+function renderCategories() {
+  const el = document.getElementById('categories-list');
+  if (!el) return;
+  if (!categories.length) {
+    el.innerHTML = '<p class="loading-text">No categories yet. Add one below.</p>';
+    return;
+  }
+  el.innerHTML = categories.map(cat => {
+    const count = products.filter(p => p.category === cat.name).length;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--light-bg);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
+        <span style="font-size:1.4rem;">${cat.icon || '📦'}</span>
+        <span style="font-weight:600;flex:1;">${cat.name}</span>
+        <span style="font-size:.75rem;color:var(--text-light);">${count} product${count !== 1 ? 's' : ''}</span>
+        <button class="del-btn" onclick="deleteCategory('${cat.id}','${cat.name.replace(/'/g,"\\'")}')">✕ Remove</button>
+      </div>`;
+  }).join('');
+}
+
+function renderProducts() {
+  const el    = document.getElementById('products-list');
+  const badge = document.getElementById('products-count-badge');
+  if (!el) return;
+  if (badge) badge.textContent = products.length + ' product' + (products.length !== 1 ? 's' : '');
+
+  if (!products.length) {
+    el.innerHTML = '<p class="loading-text">No products yet. Add one using the form below.</p>';
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  products.forEach(p => {
+    const c = p.category || 'Uncategorized';
+    if (!groups[c]) groups[c] = [];
+    groups[c].push(p);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([catName, prods]) => {
+    const catData = categories.find(c => c.name === catName);
+    return `
+      <div style="margin-bottom:20px;">
+        <div class="cat-group-header">${catData?.icon || '📦'} ${catName}</div>
+        ${prods.map(p => renderProductRow(p)).join('')}
+      </div>`;
+  }).join('');
+}
+
+function renderProductRow(p) {
+  const safeId   = p.id;
+  const safeName = p.name.replace(/'/g, "\\'");
+  return `
+    <div class="product-item-row" id="prodrow-${safeId}">
+      <span class="prod-item-icon">${p.icon || '📦'}</span>
+      <div>
+        <div class="prod-item-name">${p.name}</div>
+        <div class="prod-item-desc">${p.description || ''}</div>
+      </div>
+      <div class="prod-item-price">₱${Number(p.price || 0).toLocaleString()}
+        <span class="prod-item-unit">/${p.unit || 'pc'}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="save-btn" style="padding:6px 12px;font-size:.78rem;" onclick="showEditProduct('${safeId}')">✏️ Edit</button>
+        <button class="del-btn" onclick="deleteProduct('${safeId}','${safeName}')">✕</button>
+      </div>
+    </div>`;
+}
+
+function showEditProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const row = document.getElementById('prodrow-' + id);
+  if (!row) return;
+
+  // Toggle — if already in edit mode, cancel
+  if (row.querySelector('.edit-form')) { renderProducts(); return; }
+
+  const catOptions = categories.map(c =>
+    `<option value="${c.name}" ${c.name === p.category ? 'selected' : ''}>${c.icon || ''} ${c.name}</option>`
+  ).join('');
+
+  row.innerHTML = `
+    <div class="edit-form" style="padding:4px 0;">
+      <div style="display:grid;grid-template-columns:70px 1fr 1fr 120px 110px;gap:10px;align-items:end;margin-bottom:10px;">
+        <div class="field-group"><label>Icon</label><input type="text" id="ep-icon-${id}" value="${p.icon || ''}" style="text-align:center;font-size:1.1rem;"></div>
+        <div class="field-group"><label>Name</label><input type="text" id="ep-name-${id}" value="${p.name || ''}"></div>
+        <div class="field-group"><label>Category</label><select id="ep-cat-${id}">${catOptions}</select></div>
+        <div class="field-group"><label>Price (₱)</label><input type="number" id="ep-price-${id}" value="${p.price || 0}" min="0" step="0.5"></div>
+        <div class="field-group"><label>Unit</label><input type="text" id="ep-unit-${id}" value="${p.unit || ''}"></div>
+      </div>
+      <div class="field-group" style="margin-bottom:10px;"><label>Description</label><textarea id="ep-desc-${id}" rows="2">${p.description || ''}</textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="save-btn" onclick="updateProduct('${id}')">💾 Save</button>
+        <button class="del-btn" style="padding:8px 14px;" onclick="renderProducts()">✕ Cancel</button>
+      </div>
+    </div>`;
+}
+
+async function updateProduct(id) {
+  const g  = s => document.getElementById('ep-' + s + '-' + id)?.value?.trim() || '';
+  const gn = s => parseFloat(document.getElementById('ep-' + s + '-' + id)?.value) || 0;
+  const data = { icon: g('icon'), name: g('name'), category: g('cat'), price: gn('price'), unit: g('unit'), description: g('desc'), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  if (!data.name || !data.category) { showToast('Name and Category are required.', 'error'); return; }
   try {
-    await db.collection('site').doc('products').set(data);
-    showToast('✅ Products & prices saved!');
-  } catch(e) { showToast('❌ Save failed: ' + e.message, 'error'); }
+    await db.collection('products').doc(id).update(data);
+    const idx = products.findIndex(p => p.id === id);
+    if (idx !== -1) products[idx] = { ...products[idx], ...data };
+    renderProducts();
+    showToast('✅ Product updated!');
+  } catch(e) { showToast('❌ Update failed: ' + e.message, 'error'); }
+}
+
+function populateCategoryDropdowns() {
+  const sel = document.getElementById('np-category');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select a category...</option>' +
+    categories.map(c => `<option value="${c.name}" ${c.name === cur ? 'selected' : ''}>${c.icon || ''} ${c.name}</option>`).join('');
+}
+
+async function addCategory() {
+  const icon = (document.getElementById('new-cat-icon')?.value || '').trim();
+  const name = (document.getElementById('new-cat-name')?.value || '').trim();
+  if (!name) { showToast('Please enter a category name.', 'error'); return; }
+  if (categories.find(c => c.name === name)) { showToast('Category already exists.', 'error'); return; }
+  try {
+    const ref = await db.collection('categories').add({ name, icon, order: categories.length + 1, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    categories.push({ id: ref.id, name, icon, order: categories.length });
+    document.getElementById('new-cat-icon').value = '';
+    document.getElementById('new-cat-name').value = '';
+    renderCategories();
+    populateCategoryDropdowns();
+    showToast('✅ Category "' + name + '" added!');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
+}
+
+async function deleteCategory(id, name) {
+  const inUse = products.filter(p => p.category === name).length;
+  const msg = inUse > 0
+    ? `"${name}" has ${inUse} product(s). Deleting it won't delete the products — they'll show as Uncategorized.\n\nContinue?`
+    : `Delete category "${name}"?`;
+  if (!confirm(msg)) return;
+  try {
+    await db.collection('categories').doc(id).delete();
+    categories = categories.filter(c => c.id !== id);
+    renderCategories();
+    renderProducts();
+    populateCategoryDropdowns();
+    showToast('✅ Category deleted.');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
+}
+
+async function addProduct() {
+  const icon  = (document.getElementById('np-icon')?.value  || '').trim();
+  const name  = (document.getElementById('np-name')?.value  || '').trim();
+  const cat   = (document.getElementById('np-category')?.value || '').trim();
+  const price = parseFloat(document.getElementById('np-price')?.value) || 0;
+  const unit  = (document.getElementById('np-unit')?.value  || '').trim();
+  const desc  = (document.getElementById('np-desc')?.value  || '').trim();
+  if (!name) { showToast('Product name is required.', 'error'); return; }
+  if (!cat)  { showToast('Please select a category.', 'error'); return; }
+  try {
+    const ref = await db.collection('products').add({ icon, name, category: cat, price, unit, description: desc, order: products.length + 1, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    products.push({ id: ref.id, icon, name, category: cat, price, unit, description: desc, order: products.length });
+    ['np-icon','np-name','np-unit','np-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('np-price').value    = '';
+    document.getElementById('np-category').value = '';
+    renderProducts();
+    document.getElementById('ov-products').textContent = products.length;
+    showToast('✅ "' + name + '" added!');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm('Delete "' + name + '"?\n\nThis cannot be undone.')) return;
+  try {
+    await db.collection('products').doc(id).delete();
+    products = products.filter(p => p.id !== id);
+    renderProducts();
+    document.getElementById('ov-products').textContent = products.length;
+    showToast('✅ Product deleted.');
+  } catch(e) { showToast('❌ Failed: ' + e.message, 'error'); }
 }
 
 // ============================================================
@@ -655,12 +845,15 @@ function renderOrders(orders) {
   const container = document.getElementById('orders-list');
   if (!orders.length) { container.innerHTML = '<p class="loading-text">No orders found.</p>'; return; }
 
-  const productLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
+  const legacyLabels = { ice1kg:'Ice 1kg', ice5kg:'Ice 5kg', ice10kg:'Ice 10kg', iceBlock:'Ice Block', waterRefill:'Water Refill', waterJug:'Water Jug' };
   const statusClass  = { Pending:'badge-pending', Confirmed:'badge-confirmed', Delivered:'badge-delivered', Cancelled:'badge-cancelled' };
 
   container.innerHTML = orders.map(order => {
-    const products = Object.entries(order.products || {}).filter(([,qty]) => qty > 0)
-      .map(([k, qty]) => `<span class="order-product-tag">${productLabels[k] || k} x${qty}</span>`).join('');
+    const rawProds = order.products || order.items || {};
+    const prodTags = Array.isArray(rawProds)
+      ? rawProds.map(p => `<span class="order-product-tag">${p.icon || ''} ${p.name} x${p.qty}</span>`).join('')
+      : Object.entries(rawProds).filter(([,qty]) => qty > 0)
+          .map(([k, qty]) => `<span class="order-product-tag">${legacyLabels[k] || k} x${qty}</span>`).join('');
     const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) : (order.createdAt || '—');
     return `
       <div class="order-card" id="order-${order.id}">
@@ -676,7 +869,7 @@ function renderOrders(orders) {
           <div>💳 ${order.payment}</div>
           ${order.notes ? '<div>📝 ' + order.notes + '</div>' : ''}
         </div>
-        <div class="order-products-list">${products || '<span style="color:var(--text-light);font-size:.78rem;">No products specified</span>'}</div>
+        <div class="order-products-list">${prodTags || '<span style="color:var(--text-light);font-size:.78rem;">No products specified</span>'}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;">
           <label style="font-size:.78rem;color:var(--text-mid);">Update Status:</label>
           <select class="status-select" id="status-${order.id}">
