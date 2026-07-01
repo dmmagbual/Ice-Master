@@ -71,7 +71,9 @@
 
   /* ===== HERO ===== */
   .hero {
-    background:linear-gradient(160deg,#0a2a4a 0%,#0d3d6b 30%,#0077B6 65%,#00B4D8 100%);
+    background:
+      url('assets/hero-bg.jpg') center center / cover no-repeat,
+      linear-gradient(160deg,#0a2a4a 0%,#0077B6 100%);
     padding:80px 5% 60px;
     display:flex; align-items:center; gap:40px;
     flex-wrap:wrap; min-height:calc(100vh - 70px);
@@ -79,10 +81,12 @@
   }
   .hero::before {
     content:''; position:absolute; inset:0;
-    background:
-      radial-gradient(ellipse 120px 60px at 15% 30%,rgba(144,224,239,.18) 0%,transparent 70%),
-      radial-gradient(ellipse 80px 40px at 80% 15%,rgba(144,224,239,.14) 0%,transparent 70%),
-      radial-gradient(ellipse 200px 100px at 50% 80%,rgba(0,180,216,.12) 0%,transparent 70%);
+    background:linear-gradient(
+      135deg,
+      rgba(5,30,70,.72) 0%,
+      rgba(0,80,140,.60) 40%,
+      rgba(0,150,200,.35) 100%
+    );
     pointer-events:none;
   }
   .bubble {
