@@ -915,8 +915,21 @@ function renderOrders(orders) {
         </div>
         <div class="order-detail">
           <div>📞 ${order.phone} &nbsp;|&nbsp; 📍 ${order.address}</div>
-          <div>💳 ${order.payment}</div>
+          <div>💳 ${order.payment}${order.proofOfPayment ? ' &nbsp;<span style="color:#2d6a2d;font-size:.75rem;font-weight:600;">✅ Proof attached</span>' : ''}</div>
           ${order.notes ? '<div>📝 ' + order.notes + '</div>' : ''}
+          ${order.proofOfPayment ? `
+          <div style="margin-top:10px;">
+            <a href="${order.proofOfPayment}" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;background:#e8f4ff;color:var(--primary);padding:6px 12px;border-radius:6px;text-decoration:none;border:1px solid var(--primary-light);font-weight:600;">
+              📎 View Proof of Payment
+            </a>
+            <div style="margin-top:8px;">
+              <img src="${order.proofOfPayment}" alt="Proof of Payment"
+                style="max-width:160px;max-height:110px;border-radius:8px;border:1.5px solid var(--border);object-fit:cover;cursor:pointer;display:block;"
+                onclick="window.open('${order.proofOfPayment}','_blank')"
+                title="Click to view full size">
+            </div>
+          </div>` : ''}
         </div>
         <div class="order-products-list">${prodTags || '<span style="color:var(--text-light);font-size:.78rem;">No products specified</span>'}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;">
@@ -1026,22 +1039,71 @@ function startOrderListener() {
   if (orderUnsubscribe) orderUnsubscribe();
   orderUnsubscribe = db.collection('orders').onSnapshot(snapshot => {
     snapshot.docChanges().forEach(change => {
+      const id   = change.doc.id;
+      const data = change.doc.data();
+
       if (change.type === 'added') {
-        const id   = change.doc.id;
-        const data = change.doc.data();
         if (!knownOrderIds.has(id)) {
           // Truly new order (arrived after initial load)
           if (knownOrderIds.size > 0 && !data.archived && (!data.status || data.status === 'Pending')) {
             startNotificationSound();
             showToast('🔔 New order from ' + (data.name || 'a customer') + '!', 'success');
             allOrders.unshift({ id, ...data });
+            filterOrders(currentFilter);
             updateStats();
           }
           knownOrderIds.add(id);
         }
+
+      } else if (change.type === 'modified') {
+        // Update the in-memory order
+        const idx = allOrders.findIndex(o => o.id === id);
+        if (data.archived) {
+          // Order was archived — remove from active list
+          if (idx !== -1) {
+            allOrders.splice(idx, 1);
+            const card = document.getElementById('order-' + id);
+            if (card) card.remove();
+            updateStats();
+          }
+        } else {
+          if (idx !== -1) {
+            allOrders[idx] = { id, ...data };
+          } else {
+            allOrders.unshift({ id, ...data });
+          }
+          // Live-patch the status badge & dropdown in the DOM (no full re-render)
+          updateOrderCardStatus(id, data.status || 'Pending');
+          updateStats();
+        }
+
+      } else if (change.type === 'removed') {
+        allOrders = allOrders.filter(o => o.id !== id);
+        const card = document.getElementById('order-' + id);
+        if (card) card.remove();
+        updateStats();
       }
     });
   });
+}
+
+// Live-patch a single order card's status badge and select dropdown
+function updateOrderCardStatus(orderId, newStatus) {
+  const card = document.getElementById('order-' + orderId);
+  if (!card) return;
+  const statusClass = {
+    Pending:'badge-pending', Confirmed:'badge-confirmed', Preparing:'badge-preparing',
+    'Out for Delivery':'badge-out-for-delivery', Delivered:'badge-delivered', Cancelled:'badge-cancelled'
+  };
+  // Update badge
+  const badge = card.querySelector('.order-badge');
+  if (badge) {
+    badge.className = 'order-badge ' + (statusClass[newStatus] || 'badge-pending');
+    badge.textContent = newStatus || 'Pending';
+  }
+  // Update select so it reflects what's actually in Firestore
+  const select = document.getElementById('status-' + orderId);
+  if (select && select.value !== newStatus) select.value = newStatus;
 }
 
 // ============================================================
