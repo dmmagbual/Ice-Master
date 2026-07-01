@@ -302,6 +302,23 @@
   }
   .btn-close-modal:hover { background:var(--light-bg); color:var(--text-mid); border-color:#b0c8df; }
 
+  /* ===== PROOF OF PAYMENT UPLOAD ===== */
+  .proof-upload-area {
+    border:2px dashed var(--border); border-radius:10px;
+    padding:18px 14px; text-align:center; background:var(--light-bg);
+    cursor:pointer; transition:all .2s; position:relative;
+  }
+  .proof-upload-area:hover { border-color:var(--primary); background:#e4f3ff; }
+  .proof-upload-area .upload-icon { font-size:1.8rem; margin-bottom:6px; }
+  .proof-upload-area .upload-label { font-size:.88rem; color:var(--text-mid); font-weight:600; }
+  .proof-upload-area .upload-hint  { font-size:.75rem; color:var(--text-light); margin-top:3px; }
+  #proof-preview-img {
+    display:none; width:100%; max-height:180px; object-fit:contain;
+    border-radius:8px; border:1.5px solid var(--border);
+    margin-top:12px; background:#f8f8f8;
+  }
+  #proof-file-name { font-size:.78rem; color:var(--primary); margin-top:6px; font-weight:600; }
+
   /* ===== CONTACT ===== */
   .contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; max-width:900px; margin:0 auto; }
   @media(max-width:700px){ .contact-grid { grid-template-columns:1fr; } }
@@ -604,7 +621,7 @@
 
         <div class="form-group form-full" style="margin-top:8px;">
           <label>Payment Method *</label>
-          <select id="order-payment" required>
+          <select id="order-payment" required onchange="toggleProofUpload(this.value)">
             <option value="">Select payment method</option>
             <option>Cash on Delivery (COD)</option>
             <option>GCash</option>
@@ -612,6 +629,20 @@
             <option>Bank Transfer</option>
           </select>
         </div>
+
+        <!-- Proof of Payment — shown for non-COD methods -->
+        <div class="form-group form-full" id="proof-upload-section" style="display:none;margin-top:8px;">
+          <label>Proof of Payment <span style="font-weight:400;color:var(--text-light);">(optional — attach screenshot/receipt)</span></label>
+          <div class="proof-upload-area" onclick="document.getElementById('proof-file').click()">
+            <div class="upload-icon">📸</div>
+            <div class="upload-label">Tap to attach GCash / Maya / Bank screenshot</div>
+            <div class="upload-hint">JPG, PNG accepted · Max 5 MB</div>
+            <input type="file" id="proof-file" accept="image/*,.pdf" style="display:none;" onchange="previewProof(event)">
+          </div>
+          <img id="proof-preview-img" alt="Proof of Payment Preview">
+          <p id="proof-file-name"></p>
+        </div>
+
         <div class="form-group form-full" style="margin-top:8px;">
           <label>Special Instructions / Notes</label>
           <textarea id="order-notes" placeholder="Any special delivery instructions, landmarks, etc."></textarea>
@@ -1035,7 +1066,20 @@ async function submitOrder(e) {
     if (firebaseReady && db) {
       const shortId = Math.random().toString(36).slice(-6).toUpperCase();
       orderData.shortId = shortId;
-      const docRef = await db.collection('orders').add(orderData);
+
+      // Compress & attach proof of payment image (stored as base64 in Firestore — no paid Storage needed)
+      const proofFile = document.getElementById('proof-file')?.files?.[0];
+      if (proofFile) {
+        try {
+          btn.textContent = '🖼️ Compressing proof...';
+          orderData.proofOfPayment = await compressImageToBase64(proofFile, 900, 0.65);
+        } catch (compErr) {
+          console.warn('Proof compression failed (order will still be saved):', compErr);
+        }
+      }
+
+      btn.textContent = '⏳ Saving order...';
+      await db.collection('orders').add(orderData);
       orderId = shortId;
     }
     // Store shortId for auto-tracking
@@ -1043,6 +1087,14 @@ async function submitOrder(e) {
 
     // Reset form first
     document.getElementById('orderForm').reset();
+    // Reset proof upload UI
+    const proofSection = document.getElementById('proof-upload-section');
+    const proofImg = document.getElementById('proof-preview-img');
+    const proofName = document.getElementById('proof-file-name');
+    if (proofSection) proofSection.style.display = 'none';
+    if (proofImg) { proofImg.src = ''; proofImg.style.display = 'none'; }
+    if (proofName) proofName.textContent = '';
+
     btn.textContent = '✅ Order Submitted!';
     btn.style.background = '#5cb85c';
     const today = new Date().toISOString().split('T')[0];
@@ -1061,6 +1113,65 @@ async function submitOrder(e) {
     btn.textContent = '📦 Submit Order Request';
     btn.style.background = ''; btn.disabled = false;
   }
+}
+
+// ============================================================
+// PROOF OF PAYMENT UPLOAD (stored as compressed base64 in Firestore — free plan compatible)
+// ============================================================
+
+// Compress an image File to a JPEG base64 string (keeps it under ~700KB for Firestore)
+function compressImageToBase64(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = function() {
+        // Scale down if wider/taller than maxPx
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else        { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function toggleProofUpload(paymentValue) {
+  const nonCOD = ['GCash', 'Maya (PayMaya)', 'Bank Transfer'];
+  const section = document.getElementById('proof-upload-section');
+  if (section) section.style.display = nonCOD.includes(paymentValue) ? 'block' : 'none';
+  if (!nonCOD.includes(paymentValue)) {
+    // Clear any selected proof when switching back to COD
+    const fi = document.getElementById('proof-file');
+    const img = document.getElementById('proof-preview-img');
+    const nm = document.getElementById('proof-file-name');
+    if (fi) fi.value = '';
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    if (nm) nm.textContent = '';
+  }
+}
+
+function previewProof(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const nm = document.getElementById('proof-file-name');
+  if (nm) nm.textContent = '📎 ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+  if (!file.type.startsWith('image/')) return; // PDF — no preview, just show filename
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = document.getElementById('proof-preview-img');
+    if (img) { img.src = ev.target.result; img.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ============================================================
