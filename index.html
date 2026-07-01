@@ -1082,8 +1082,9 @@ async function submitOrder(e) {
       await db.collection('orders').add(orderData);
       orderId = shortId;
     }
-    // Store shortId for auto-tracking
+    // Store shortId for auto-tracking — survives page refresh via localStorage
     window._autoTrackId = orderId;
+    if (orderId) localStorage.setItem('icemaster_track_id', orderId);
 
     // Reset form first
     document.getElementById('orderForm').reset();
@@ -1232,12 +1233,15 @@ function showPage(pageId) {
   if (navLink) navLink.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // If navigating to Track page and we have an order from this session, auto-load it
-  if (pageId === 'track' && window._autoTrackId) {
-    const input = document.getElementById('track-input');
-    if (input) input.value = window._autoTrackId;
-    // Small delay to let the page render first
-    setTimeout(() => trackOrder(), 250);
+  // Auto-load saved order when navigating to Track page (survives refresh via localStorage)
+  if (pageId === 'track') {
+    const savedId = window._autoTrackId || localStorage.getItem('icemaster_track_id');
+    if (savedId) {
+      window._autoTrackId = savedId;
+      const input = document.getElementById('track-input');
+      if (input) input.value = savedId;
+      setTimeout(() => trackOrder(), 250);
+    }
   }
 }
 
@@ -1273,6 +1277,10 @@ setInterval(spawnBubble, 900);
 // Load content from Firebase
 loadSiteContent();
 
+// Restore tracking ID from localStorage (survives page refresh / accidental close)
+const _storedTrackId = localStorage.getItem('icemaster_track_id');
+if (_storedTrackId) window._autoTrackId = _storedTrackId;
+
 // ============================================================
 // ORDER TRACKING (real-time via onSnapshot)
 // ============================================================
@@ -1283,9 +1291,42 @@ function clearTrackingListeners() {
   trackingUnsubscribers = [];
 }
 
+function markOrderReceived() {
+  // Customer confirms they received the order — clear their tracking
+  localStorage.removeItem('icemaster_track_id');
+  window._autoTrackId = null;
+  clearTrackingListeners();
+
+  // Hide banner, show search box again
+  const banner = document.getElementById('track-my-order-banner');
+  const searchBox = document.getElementById('track-search-box');
+  if (banner) banner.style.display = 'none';
+  if (searchBox) searchBox.style.display = 'block';
+  const input = document.getElementById('track-input');
+  if (input) input.value = '';
+
+  // Show thank-you screen
+  const el = document.getElementById('track-result');
+  if (el) el.innerHTML = `
+    <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:48px 28px;text-align:center;">
+      <div style="font-size:4rem;margin-bottom:16px;">🎉</div>
+      <h3 style="color:var(--text-dark);font-size:1.5rem;margin-bottom:10px;">Thank You!</h3>
+      <p style="color:var(--text-mid);font-size:.95rem;line-height:1.7;">
+        We're glad your order arrived safely.<br>Thank you for choosing <strong>Ice Master</strong>!
+      </p>
+      <a href="#" onclick="showPage('order')"
+        style="display:inline-block;margin-top:24px;background:var(--primary);color:#fff;
+               padding:14px 32px;border-radius:30px;text-decoration:none;font-weight:700;font-size:.95rem;
+               box-shadow:0 4px 14px rgba(0,119,182,0.35);">
+        📦 Order Again
+      </a>
+    </div>`;
+}
+
 function clearMyOrder() {
   // Reset auto-track state and show normal search UI
   window._autoTrackId = null;
+  localStorage.removeItem('icemaster_track_id');
   const banner = document.getElementById('track-my-order-banner');
   const searchBox = document.getElementById('track-search-box');
   const input = document.getElementById('track-input');
@@ -1309,15 +1350,17 @@ async function trackOrder() {
     return;
   }
 
-  // If this is the customer's own order from this session, show banner & collapse search
-  const isMyOrder = window._autoTrackId && query.toUpperCase() === window._autoTrackId.toUpperCase();
-  const banner = document.getElementById('track-my-order-banner');
+  // If this is the customer's own order (from session or localStorage), show banner & collapse search
+  const savedId    = window._autoTrackId || localStorage.getItem('icemaster_track_id');
+  const isMyOrder  = savedId && query.toUpperCase() === savedId.toUpperCase();
+  if (isMyOrder) window._autoTrackId = savedId; // restore after refresh
+  const banner    = document.getElementById('track-my-order-banner');
   const searchBox = document.getElementById('track-search-box');
   if (isMyOrder && banner && searchBox) {
     banner.style.display = 'flex';
     searchBox.style.display = 'none';
     const idEl = document.getElementById('track-my-order-id');
-    if (idEl) idEl.textContent = '#' + window._autoTrackId;
+    if (idEl) idEl.textContent = '#' + savedId;
   } else {
     if (banner) banner.style.display = 'none';
     if (searchBox) searchBox.style.display = 'block';
@@ -1436,7 +1479,17 @@ function renderTrackingCardInner(order) {
     ${cancelled
       ? `<div style="text-align:center;padding:20px;color:#dc3545;font-weight:600;">❌ This order has been cancelled. Please contact us if you have questions.</div>`
       : `<div style="display:flex;align-items:flex-start;padding:8px 0;">${stepsHTML}</div>
-         <p style="font-size:.7rem;color:var(--text-light);text-align:center;margin-top:14px;">This page updates automatically — no need to refresh.</p>`
+         <p style="font-size:.7rem;color:var(--text-light);text-align:center;margin-top:14px;">🔴 Live — updates automatically. No need to refresh.</p>
+         ${order.status === 'Delivered' ? `
+         <div style="margin-top:20px;padding-top:18px;border-top:1.5px solid var(--border);text-align:center;">
+           <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:12px;">Your order has been delivered! Did you receive it?</p>
+           <button onclick="markOrderReceived()"
+             style="background:linear-gradient(135deg,#43c75a,#2ea84a);color:#fff;border:none;
+                    padding:14px 32px;border-radius:30px;font-size:.95rem;font-weight:700;cursor:pointer;
+                    box-shadow:0 4px 16px rgba(67,199,90,0.4);transition:.2s;">
+             ✅ Yes, I received my order!
+           </button>
+         </div>` : ''}`
     }
   </div>`;
 }

@@ -196,6 +196,24 @@
   .archive-btn { background:rgba(108,117,125,.1); color:#495057; border:1px solid rgba(108,117,125,.3); padding:5px 10px; border-radius:6px; font-size:.78rem; cursor:pointer; }
   .archive-btn:hover { background:#6c757d; color:#fff; }
 
+  /* New unacknowledged order highlight */
+  .order-card-new {
+    border:2px solid #f0ad4e !important;
+    animation:pulseNewOrder 1.6s ease-in-out infinite;
+    cursor:pointer;
+  }
+  @keyframes pulseNewOrder {
+    0%,100% { box-shadow:0 4px 14px rgba(240,173,78,0.25); }
+    50%      { box-shadow:0 4px 28px rgba(240,173,78,0.65); }
+  }
+  .order-card-new::before {
+    content:'🆕 New Order — tap to acknowledge';
+    display:block; background:#fff3cd; color:#856404;
+    font-size:.72rem; font-weight:700; padding:5px 12px;
+    border-radius:6px; margin-bottom:10px; text-align:center;
+    border:1px solid #ffc107;
+  }
+
   /* Tracking status steps (for index.html tracking page) */
   .arch-date-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; padding:14px; background:var(--light-bg); border-radius:8px; border:1px solid var(--border); }
   .arch-date-row label { font-size:.82rem; font-weight:600; color:var(--text-mid); }
@@ -531,7 +549,7 @@ function showTab(tab) {
   const items = document.querySelectorAll('.nav-item');
   const tabMap = { overview:0, settings:1, products:2, delivery:3, orders:4, archive:5 };
   if (tabMap[tab] !== undefined) items[tabMap[tab]].classList.add('active');
-  if (tab === 'orders') { stopNotificationSound(); loadOrders(); }
+  if (tab === 'orders') { loadOrders(); }
   if (tab === 'archive') loadArchive(true);
 }
 
@@ -905,7 +923,7 @@ function renderOrders(orders) {
     const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) : (order.createdAt || '—');
     const shortId = order.id.slice(-8).toUpperCase();
     return `
-      <div class="order-card" id="order-${order.id}">
+      <div class="order-card${newPendingOrders.has(order.id) ? ' order-card-new' : ''}" id="order-${order.id}" onclick="acknowledgeOrder('${order.id}')">
         <div class="order-header">
           <div>
             <div class="order-name">👤 ${order.name} <span style="font-size:.72rem;color:var(--text-light);font-weight:400;">#${shortId}</span></div>
@@ -989,11 +1007,21 @@ async function loadOrders() {
 // ============================================================
 // SOUND NOTIFICATION SYSTEM
 // ============================================================
-let knownOrderIds   = new Set();
-let soundActive     = false;
-let beepInterval    = null;
-let audioCtx        = null;
+let knownOrderIds    = new Set();
+let newPendingOrders = new Set(); // tracks unacknowledged new orders
+let soundActive      = false;
+let beepInterval     = null;
+let audioCtx         = null;
 let orderUnsubscribe = null;
+
+// Called when admin clicks a specific new order card
+function acknowledgeOrder(orderId) {
+  newPendingOrders.delete(orderId);
+  const card = document.getElementById('order-' + orderId);
+  if (card) card.classList.remove('order-card-new');
+  // Only stop sound/badge when ALL new orders have been acknowledged
+  if (newPendingOrders.size === 0) stopNotificationSound();
+}
 
 // Initialize AudioContext on first user click (browser requirement)
 document.addEventListener('click', function() {
@@ -1046,6 +1074,7 @@ function startOrderListener() {
         if (!knownOrderIds.has(id)) {
           // Truly new order (arrived after initial load)
           if (knownOrderIds.size > 0 && !data.archived && (!data.status || data.status === 'Pending')) {
+            newPendingOrders.add(id); // track this order until admin clicks it
             startNotificationSound();
             showToast('🔔 New order from ' + (data.name || 'a customer') + '!', 'success');
             allOrders.unshift({ id, ...data });
