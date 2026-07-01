@@ -187,6 +187,7 @@
   .product-card.featured { border-color:var(--primary); background:var(--light-bg); }
   .featured-badge { position:absolute; top:16px; right:-10px; background:var(--primary); color:#fff; font-size:.68rem; font-weight:700; padding:3px 16px 3px 10px; letter-spacing:1px; }
   .product-icon { font-size:3rem; margin-bottom:12px; }
+  .product-img { width:110px; height:120px; object-fit:contain; display:block; margin:0 auto 12px; }
   .product-card h3 { font-size:1.1rem; font-weight:700; color:var(--text-dark); margin-bottom:6px; }
   .product-card .desc { font-size:.85rem; color:var(--text-light); margin-bottom:18px; line-height:1.5; }
   .price-row { display:flex; justify-content:center; align-items:baseline; gap:4px; margin-bottom:6px; }
@@ -851,6 +852,27 @@ async function loadSiteContent() {
   hideLoader();
 }
 
+// Map product name keywords → local image file in assets/
+// Just drop your own JPG into assets/ with the matching filename and it shows up automatically.
+function getProductImage(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('10kg'))                              return 'assets/ice-10kg.jpg';
+  if (n.includes('5kg'))                               return 'assets/ice-5kg.jpg';
+  if (n.includes('1kg'))                               return 'assets/ice-1kg.jpg';
+  if (n.includes('container'))                         return 'assets/water-container.jpg';
+  if (n.includes('refill') || n.includes('gallon'))    return 'assets/water-refill.jpg';
+  if (n.includes('1l') || n.includes('bottle') || n.includes('1 l')) return 'assets/water-1l.jpg';
+  return null; // falls back to emoji icon
+}
+
+function productMedia(p) {
+  const img = getProductImage(p.name);
+  return img
+    ? `<img class="product-img" src="${img}" alt="${p.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
+      + `<div class="product-icon" style="display:none">${p.icon || '📦'}</div>`
+    : `<div class="product-icon">${p.icon || '📦'}</div>`;
+}
+
 function renderProductsPage() {
   const container = document.getElementById('dynamic-products-container');
   if (!container) return;
@@ -876,7 +898,7 @@ function renderProductsPage() {
         ${prods.map((p, idx) => `
           <div class="product-card${idx === 0 ? ' featured' : ''}">
             ${idx === 0 ? '<span class="featured-badge">POPULAR</span>' : ''}
-            <div class="product-icon">${p.icon || '📦'}</div>
+            ${productMedia(p)}
             <h3>${p.name}</h3>
             <p class="desc">${p.description || ''}</p>
             <div class="price-row">
@@ -898,7 +920,7 @@ function renderHomePreview() {
   container.innerHTML = preview.map((p, idx) => `
     <div class="product-card${idx === 0 ? ' featured' : ''}">
       ${idx === 0 ? '<span class="featured-badge">BESTSELLER</span>' : ''}
-      <div class="product-icon">${p.icon || '📦'}</div>
+      ${productMedia(p)}
       <h3>${p.name}</h3>
       <div class="price-row">
         <span class="price">${fmt(p.price)}</span>
